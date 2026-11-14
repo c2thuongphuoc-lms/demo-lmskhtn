@@ -1,0 +1,6 @@
+{
+  "name": "LMS KHOA HỌC TỰ NHIÊN",
+  "description": "NỀN TẢNG HỌC TẬP TRỰC TUYẾN MÔN KHOA HỌC TỰ NHIÊN",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function() {
+        const isViteNoise = (msg) => {
+          if (typeof msg !== 'string') return false;
+          return msg.includes('[vite]') || msg.includes('WebSocket') || msg.includes('websocket');
+        };
+        const origErr = console.error;
+        console.error = function(...args) {
+          if (args.some(isViteNoise)) return;
+          origErr.apply(console, args);
+        };
+        const origWarn = console.warn;
+        console.warn = function(...args) {
+          if (args.some(isViteNoise)) return;
+          origWarn.apply(console, args);
+        };
+        window.addEventListener('error', function(e) {
+          if (e && e.message && isViteNoise(e.message)) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+          }
+        });
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#1a447c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="LMS KHTN" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="./logo.png" />
+    <link rel="shortcut icon" href="./favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <title>LMS KHOA HỌC TỰ NHIÊN</title>
+    <meta name="description" content="NỀN TẢNG HỌC TẬP TRỰC TUYẾN MÔN KHOA HỌC TỰ NHIÊN" />
+    <meta property="og:title" content="LMS KHOA HỌC TỰ NHIÊN" />
+    <meta property="og:description" content="NỀN TẢNG HỌC TẬP TRỰC TUYẾN MÔN KHOA HỌC TỰ NHIÊN" />
+    <script>
+      window.MathJax = {
+        options: {
+          enableMenu: false,
+          ignoreHtmlClass: 'tex2jax_ignore',
+          processHtmlClass: 'tex2jax_process'
+        },
+        startup: {
+          pageReady: () => {
+            return window.MathJax.startup.defaultPageReady();
+          }
+        }
+      };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/mml-chtml.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+
