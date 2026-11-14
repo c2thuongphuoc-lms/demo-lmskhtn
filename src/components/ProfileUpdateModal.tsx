@@ -87,7 +87,7 @@ export const ProfileUpdateModal: React.FC<ProfileUpdateModalProps> = ({
     const cleanId = currentUser.idUser.toLowerCase();
     const isCurrentUserAdmin =
       currentUser.role === 'ADMIN' ||
-      cleanId === 'admin.c3nguyenquangdieu' ||
+      cleanId === 'admin.c2thuongphuoc' ||
       cleanId === 'admin';
 
     // Persist directly to Supabase-backed server. UI is updated only after request succeeds.

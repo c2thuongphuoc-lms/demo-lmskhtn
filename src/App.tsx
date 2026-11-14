@@ -356,7 +356,7 @@ export default function App() {
 
           if (data.admin && currentUser) {
             const currentId = currentUser.idUser.toLowerCase();
-            const isCurAdmin = currentUser.role === 'ADMIN' || currentId === 'admin.c3nguyenquangdieu' || currentId === 'admin';
+            const isCurAdmin = currentUser.role === 'ADMIN' || currentId === 'admin.c2thuongphuoc' || currentId === 'admin';
             if (isCurAdmin) {
               const av = data.admin.avatar || data.admin.avatarUrl || '';
               if (av && (currentUser.avatar !== av || currentUser.avatarUrl !== av)) {
@@ -381,7 +381,7 @@ export default function App() {
               .filter((s: any) => s && !demoAccountIds.has(String(s.idUser || '').toLowerCase()))
               .map((s: any) => ({ ...s, role: 'STUDENT' }));
             const currentId = currentUser.idUser.toLowerCase();
-            const isCurAdmin = currentUser.role === 'ADMIN' || currentId === 'admin.c3nguyenquangdieu' || currentId === 'admin';
+            const isCurAdmin = currentUser.role === 'ADMIN' || currentId === 'admin.c2thuongphuoc' || currentId === 'admin';
             if (!isCurAdmin) {
               const myAccount = [...tList, ...sList].find((a) => a.idUser.toLowerCase() === currentId);
               if (myAccount && (myAccount.avatar || myAccount.avatarUrl)) {

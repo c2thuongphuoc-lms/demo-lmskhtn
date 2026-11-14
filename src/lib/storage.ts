@@ -43,7 +43,7 @@ interface Cache {
 
 const cache: Cache = {
   accounts: { teachers: [], students: [] },
-  admin: { idUser: 'admin.c3nguyenquangdieu', hoTen: 'Administrator', chiDoan: 'BGH', defaultPass: '', customPass: '', role: 'ADMIN', avatar: '', avatarUrl: '' },
+  admin: { idUser: 'admin.c2thuongphuoc', hoTen: 'Administrator', chiDoan: 'BGH', defaultPass: '', customPass: '', role: 'ADMIN', avatar: '', avatarUrl: '' },
   passwords: {}, pendingRegistrations: [], resetPasswordRequests: [], courses: [],
   enrollments: {}, progress: {}, quizStatus: {}, certificates: [], dailyStudyLog: {},
   qaQuestions: [], notifications: [], dismissedNotifications: {}, schoolNotices: [],
@@ -112,7 +112,13 @@ export function hydrateStorageFromServer(payload: any): void {
           .map((x: any) => ({ ...x, role: 'STUDENT' }))
       : [],
   };
-  if (payload.admin) cache.admin = { ...cache.admin, ...payload.admin, role: 'ADMIN' };
+  if (payload.admin) {
+    const normalizedAdmin = { ...payload.admin };
+    if (!normalizedAdmin.idUser || normalizedAdmin.idUser === 'admin.c3nguyenquangdieu') {
+      normalizedAdmin.idUser = 'admin.c2thuongphuoc';
+    }
+    cache.admin = { ...cache.admin, ...normalizedAdmin, role: 'ADMIN' };
+  }
   if (Array.isArray(payload.pendingRegistrations)) cache.pendingRegistrations = payload.pendingRegistrations;
   if (Array.isArray(payload.resetPasswordRequests)) cache.resetPasswordRequests = payload.resetPasswordRequests;
   if (Array.isArray(payload.courses)) {

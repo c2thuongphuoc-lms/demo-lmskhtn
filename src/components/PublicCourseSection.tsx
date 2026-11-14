@@ -554,11 +554,11 @@ export const PublicCourseSection: React.FC<PublicCourseSectionProps> = ({
                     key={c.courseId}
                     className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col overflow-hidden group"
                   >
-                    <div className="relative h-36 sm:h-38 bg-slate-100 overflow-hidden">
+                    <div className="relative w-full aspect-video bg-slate-100 overflow-hidden shrink-0">
                       <img
                         src={c.imageUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}
                         alt={c.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           (e.target as HTMLElement).style.display = 'none';
                         }}

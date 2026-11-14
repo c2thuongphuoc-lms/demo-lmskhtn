@@ -1445,7 +1445,7 @@ const initialDb: DbSchema = {
 // ----------------------------------------------------
 // SYSTEM ADMIN CREDENTIALS & CONSTANTS
 // ----------------------------------------------------
-const ADMIN_USERNAME = "admin.c3nguyenquangdieu";
+const ADMIN_USERNAME = "admin.c2thuongphuoc";
 const ADMIN_PASSWORD = "19310326";
 
 // ----------------------------------------------------

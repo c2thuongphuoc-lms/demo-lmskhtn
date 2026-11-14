@@ -471,7 +471,7 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
     reg.idUser = targetId;
     reg.status = 'APPROVED';
     reg.processedAt = new Date().toISOString();
-    reg.processedBy = currentUser?.idUser || 'admin.c3nguyenquangdieu';
+    reg.processedBy = currentUser?.idUser || 'admin.c2thuongphuoc';
     reg.responseNote = 'Tài khoản đã được phê duyệt thành công.';
     const allPending = getStoredPendingRegistrations();
     const updated = allPending.map((p) => (p.id === reg.id ? reg : p));
@@ -868,7 +868,7 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
   // Check duplicates in parsedRows against DB and internal list
   const runDuplicateCheck = (rows: AccountRow[]) => {
     const existingIds = new Map<string, string>();
-    existingIds.set('admin.c3nguyenquangdieu', 'Tài khoản Quản trị viên hệ thống (Admin)');
+    existingIds.set('admin.c2thuongphuoc', 'Tài khoản Quản trị viên hệ thống (Admin)');
 
     teachers.forEach((t) => {
       existingIds.set(
@@ -1181,7 +1181,7 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
   // Delete an existing account from DB or Local Storage
   const handleDeleteExistingAccount = async (idUser: string) => {
     const cleanId = String(idUser || '').trim().toLowerCase();
-    if (cleanId === 'admin.c3nguyenquangdieu' || cleanId === 'admin' || activeTab === 'ADMIN') {
+    if (cleanId === 'admin.c2thuongphuoc' || cleanId === 'admin' || activeTab === 'ADMIN') {
       alert('Tài khoản Quản trị viên (Admin) được bảo vệ vĩnh viễn và không thể bị xóa!');
       return;
     }
@@ -1901,7 +1901,7 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 font-mono mt-0.5">
-                        Tên đăng nhập (ID): <strong className="text-purple-700 font-bold">{adminAccount?.idUser || 'admin.c3nguyenquangdieu'}</strong>
+                        Tên đăng nhập (ID): <strong className="text-purple-700 font-bold">{adminAccount?.idUser || 'admin.c2thuongphuoc'}</strong>
                       </p>
                     </div>
                   </div>
@@ -1918,7 +1918,7 @@ export const AccountManagementModal: React.FC<AccountManagementModalProps> = ({
                       Mã tài khoản (ID)
                     </span>
                     <span className="font-mono font-bold text-sm text-blue-900">
-                      {adminAccount?.idUser || 'admin.c3nguyenquangdieu'}
+                      {adminAccount?.idUser || 'admin.c2thuongphuoc'}
                     </span>
                   </div>
 

@@ -35,7 +35,7 @@ interface LoginModalProps {
   onLoginSuccess: (user: User) => void;
 }
 
-const ADMIN_USERNAME = 'admin.c3nguyenquangdieu';
+const ADMIN_USERNAME = 'admin.c2thuongphuoc';
 const ADMIN_PASSWORD = '19310326';
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -430,7 +430,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       }
     }
 
-    setErrorMsg('Mật khẩu không chính xác hoặc tài khoản chưa được Admin (admin.c3nguyenquangdieu) phê duyệt!');
+    setErrorMsg('Mật khẩu không chính xác hoặc tài khoản chưa được Admin (admin.c2thuongphuoc) phê duyệt!');
   };
 
   return (
@@ -620,7 +620,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="flex-1 flex flex-col justify-between md:justify-start space-y-3">
                 <div className="p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-2xl text-emerald-950 space-y-2.5">
                   <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium">
-                    Yêu cầu đăng ký tài khoản đã được gửi tới Admin (<strong className="text-blue-800 font-bold">admin.c3nguyenquangdieu</strong>).
+                    Yêu cầu đăng ký tài khoản đã được gửi tới Admin (<strong className="text-blue-800 font-bold">admin.c2thuongphuoc</strong>).
                   </p>
 
                   <div className="bg-white p-3 rounded-xl border border-emerald-200 space-y-1.5 text-xs sm:text-sm text-slate-800 shadow-2xs">

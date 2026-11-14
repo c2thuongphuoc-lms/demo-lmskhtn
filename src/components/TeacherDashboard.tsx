@@ -1034,15 +1034,17 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
                   key={c.courseId}
                   className="bg-white rounded-2xl border border-slate-200/90 shadow-xs hover:shadow-md hover:border-blue-300 transition-all p-5 flex flex-col justify-between space-y-4"
                 >
-                  <div className="flex gap-3.5">
-                    <img
-                      src={c.imageUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}
-                      alt={c.title}
-                      className="w-20 h-20 rounded-xl object-cover bg-blue-50 border border-slate-100 shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
+                  <div className="flex gap-3.5 items-start">
+                    <div className="relative w-28 aspect-video rounded-xl overflow-hidden bg-blue-50 border border-slate-100 shrink-0">
+                      <img
+                        src={c.imageUrl || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=500'}
+                        alt={c.title}
+                        className="absolute inset-0 w-full h-full object-cover object-center"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
                     <div className="min-w-0 flex-grow">
                       <h4 className="font-extrabold text-slate-900 text-sm line-clamp-2 leading-snug">
                         {c.title}

@@ -681,7 +681,7 @@ VALUES ('SCHEMA_INITIALIZED', jsonb_build_object('status', 'SUCCESS', 'version',
 
       const curAdmin = getStoredAdminProfile();
       const adminEntry = {
-        idUser: curAdmin.idUser || 'admin.c3nguyenquangdieu',
+        idUser: curAdmin.idUser || 'admin.c2thuongphuoc',
         hoTen: curAdmin.hoTen || 'Administrator',
         chiDoan: curAdmin.chiDoan || 'BGH',
         defaultPass: curAdmin.defaultPass || '19310326',
