@@ -27,12 +27,12 @@ export const Footer: React.FC<FooterProps> = ({ isCollapsed = false, hasUser = f
           <div className="hidden sm:flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1 text-slate-300 text-xs">
             <div className="flex items-center gap-1.5">
               <Phone className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>Hỗ trợ: <strong className="text-white font-bold">0819.817.154</strong></span>
+              <span>Hỗ trợ: <strong className="text-white font-bold">0358883840</strong></span>
             </div>
             <span className="hidden sm:inline text-slate-600 font-bold">|</span>
             <div className="flex items-center gap-1.5">
               <Mail className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-              <span>Email: <strong className="text-sky-200 font-medium">vtnhuyen@gmail.com</strong></span>
+              <span>Email: <strong className="text-sky-200 font-medium">vtnhuyen27197@gmail.com</strong></span>
             </div>
           </div>
         </div>
@@ -69,12 +69,12 @@ export const Footer: React.FC<FooterProps> = ({ isCollapsed = false, hasUser = f
         <div className="hidden sm:flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-slate-300 text-xs">
           <div className="flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5 text-amber-400" />
-            <span>Hỗ trợ: <strong className="text-white">0819.817.154</strong></span>
+            <span>Hỗ trợ: <strong className="text-white">0358883840</strong></span>
           </div>
           <span className="hidden sm:inline text-slate-600">|</span>
           <div className="flex items-center gap-1.5">
             <Mail className="w-3.5 h-3.5 text-sky-400" />
-            <span className="text-[11px] sm:text-xs">Email: vtnhuyen@gmail.com</span>
+            <span className="text-[11px] sm:text-xs">Email: vtnhuyen27197@gmail.com</span>
           </div>
         </div>
 
