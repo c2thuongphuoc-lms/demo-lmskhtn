@@ -419,9 +419,9 @@ export const AppTopHeader: React.FC<AppTopHeaderProps> = ({
             <button
               type="button"
               onClick={onOpenLogin}
-              className="h-10 px-4.5 flex items-center gap-2 bg-white hover:bg-blue-50 text-[#0B4D9C] font-bold text-xs sm:text-sm rounded-xl shadow-md border border-white/80 transition-all active:scale-95 cursor-pointer shrink-0"
+              className="h-10 px-3.5 sm:px-4.5 flex items-center gap-2 bg-white hover:bg-blue-50 text-[#0B4D9C] font-bold text-xs sm:text-sm rounded-xl shadow-md border border-white/80 transition-all active:scale-95 cursor-pointer whitespace-nowrap shrink-0"
             >
-              <LogIn className="w-4 h-4 text-[#0B4D9C]" />
+              <LogIn className="w-4 h-4 text-[#0B4D9C] shrink-0" />
               <span>Đăng nhập</span>
             </button>
           )}

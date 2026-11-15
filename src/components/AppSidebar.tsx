@@ -24,6 +24,7 @@ import {
   Globe,
   Briefcase,
   Trophy,
+  Gamepad2,
 } from 'lucide-react';
 import schoolLogo from '../assets/logo';
 
@@ -43,7 +44,8 @@ export type SidebarTabId =
   | 'myCourses'
   | 'allCourses'
   | 'achievements'
-  | 'leaderboard';
+  | 'leaderboard'
+  | 'games';
 
 interface AppSidebarProps {
   activeTab: SidebarTabId;
@@ -95,7 +97,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
   // Profile Information calculations for bottom card (Matching Image 2)
   const avatarInitials = (() => {
-    if (!currentUser) return 'AD';
+    if (!currentUser) return 'KH';
     if (isAdmin) return 'AD';
     if (currentUser.hoTen) {
       const parts = String(currentUser.hoTen || '').trim().split(/\s+/).filter(Boolean);
@@ -110,7 +112,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   const avatarUrl = currentUser?.avatar || currentUser?.avatarUrl || '';
 
   const displayName = (() => {
-    if (!currentUser) return 'QUẢN TRỊ VIÊN';
+    if (!currentUser) return 'KHÁCH XEM TRƯỚC';
     if (isAdmin) {
       return currentUser.hoTen && currentUser.hoTen.toLowerCase() !== 'admin'
         ? currentUser.hoTen.toUpperCase()
@@ -121,7 +123,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   })();
 
   const roleSubtitle = (() => {
-    if (!currentUser) return 'QUẢN TRỊ VIÊN';
+    if (!currentUser) return 'CHẾ ĐỘ XEM TRƯỚC';
     if (isAdmin) return 'QUẢN TRỊ VIÊN';
     if (isTeacher) return 'GIÁO VIÊN';
     return 'HỌC SINH';
@@ -130,14 +132,15 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   const positionLabel = (() => {
     if (isStudent) return 'Lớp';
     if (isTeacher) return 'Tổ chuyên môn';
-    return isAdmin ? 'Chức vụ' : 'Tổ chuyên môn';
+    if (isAdmin) return 'Chức vụ';
+    return 'Trạng thái';
   })();
 
-  // Chức vụ = Lớp (đối với học sinh) = tổ chuyên môn (đối với giáo viên) = BCH Đoàn trường (đối với admin)
+  // Chức vụ = Lớp (đối với học sinh) = tổ chuyên môn (đối với giáo viên) = BGH (đối với admin)
   const positionValue = (() => {
-    if (!currentUser) return 'BCH Đoàn trường';
+    if (!currentUser) return 'Chưa đăng nhập';
     if (isAdmin) {
-      return currentUser.chiDoan || 'BCH Đoàn trường';
+      return currentUser.chiDoan || 'BGH';
     }
     if (isTeacher) {
       return currentUser.chiDoan || 'Tổ chuyên môn';
@@ -334,6 +337,23 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   {!isCollapsed && <span className="truncate">Bảng xếp hạng</span>}
                 </button>
 
+                {/* 6b. Tab: Trò chơi */}
+                <button
+                  type="button"
+                  onClick={() => handleTabClick('games')}
+                  className={`group flex items-center rounded-xl font-bold text-[13.5px] sm:text-sm transition-all duration-200 cursor-pointer ${
+                    isCollapsed ? 'w-10 h-10 mx-auto justify-center' : 'w-full gap-2.5 px-3 py-2 sm:py-2.5 text-left'
+                  } ${
+                    activeTab === 'games'
+                      ? `bg-white text-[#0B4D9C] shadow-md font-extrabold border border-white ${isCollapsed ? '' : 'translate-x-1'}`
+                      : 'text-white/85 border border-transparent hover:text-white hover:bg-white/20 hover:border-white/25 hover:shadow-sm hover:translate-x-0.5'
+                  }`}
+                  title="Kho trò chơi ôn tập kiến thức (Wordwall, Kahoot, Quizizz...)"
+                >
+                  <Gamepad2 className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${activeTab === 'games' ? 'text-[#0B4D9C]' : 'text-white/80 group-hover:text-white'}`} />
+                  {!isCollapsed && <span className="truncate">Trò chơi</span>}
+                </button>
+
                 {/* 7. Tab: Thử nghiệm Học sinh */}
                 <button
                   type="button"
@@ -517,6 +537,23 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                   {!isCollapsed && <span>Bảng xếp hạng</span>}
                 </button>
 
+                {/* 6. Tab: Trò chơi */}
+                <button
+                  type="button"
+                  onClick={() => handleTabClick('games')}
+                  className={`group flex items-center rounded-xl font-bold text-[13.5px] sm:text-sm transition-all duration-200 cursor-pointer ${
+                    isCollapsed ? 'w-10 h-10 mx-auto justify-center' : 'w-full gap-2.5 px-3 py-2 sm:py-2.5 text-left'
+                  } ${
+                    activeTab === 'games'
+                      ? `bg-white text-[#0B4D9C] shadow-md font-extrabold border border-white ${isCollapsed ? '' : 'translate-x-1'}`
+                      : 'text-white/85 border border-transparent hover:text-white hover:bg-white/20 hover:border-white/25 hover:shadow-sm hover:translate-x-0.5'
+                  }`}
+                  title="Trò chơi ôn tập kiến thức tương tác"
+                >
+                  <Gamepad2 className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${activeTab === 'games' ? 'text-[#0B4D9C]' : 'text-white/80 group-hover:text-white'}`} />
+                  {!isCollapsed && <span>Trò chơi</span>}
+                </button>
+
                 {/* Return button if testing mode */}
                 {isTeacherTestingMode && (
                   <button
@@ -546,9 +583,26 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                       ? `bg-white text-[#0B4D9C] shadow-md font-extrabold border border-white ${isCollapsed ? '' : 'translate-x-1'}`
                       : 'text-white/85 border border-transparent hover:text-white hover:bg-white/20 hover:border-white/25 hover:shadow-sm hover:translate-x-0.5'
                   }`}
+                  title="Tổng quan khóa học"
                 >
                   <LayoutDashboard className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${activeTab === 'overview' ? 'text-[#0B4D9C]' : 'text-white/80 group-hover:text-white'}`} />
                   {!isCollapsed && <span>Tổng quan khóa học</span>}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleTabClick('games')}
+                  className={`group flex items-center rounded-xl font-bold text-[13.5px] sm:text-sm transition-all duration-200 cursor-pointer ${
+                    isCollapsed ? 'w-10 h-10 mx-auto justify-center' : 'w-full gap-2.5 px-3 py-2 sm:py-2.5 text-left'
+                  } ${
+                    activeTab === 'games'
+                      ? `bg-white text-[#0B4D9C] shadow-md font-extrabold border border-white ${isCollapsed ? '' : 'translate-x-1'}`
+                      : 'text-white/85 border border-transparent hover:text-white hover:bg-white/20 hover:border-white/25 hover:shadow-sm hover:translate-x-0.5'
+                  }`}
+                  title="Trò chơi ôn tập kiến thức tương tác"
+                >
+                  <Gamepad2 className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${activeTab === 'games' ? 'text-[#0B4D9C]' : 'text-white/80 group-hover:text-white'}`} />
+                  {!isCollapsed && <span>Trò chơi</span>}
                 </button>
 
                 <button
@@ -561,6 +615,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
                       ? `bg-white text-[#0B4D9C] shadow-md font-extrabold border border-white ${isCollapsed ? '' : 'translate-x-1'}`
                       : 'text-white/85 border border-transparent hover:text-white hover:bg-white/20 hover:border-white/25 hover:shadow-sm hover:translate-x-0.5'
                   }`}
+                  title="Bảng tin & Thông báo"
                 >
                   <Megaphone className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-110 ${activeTab === 'notifications' ? 'text-[#0B4D9C]' : 'text-white/80 group-hover:text-white'}`} />
                   {!isCollapsed && <span>Bảng tin & Thông báo</span>}

@@ -12,6 +12,7 @@ import { NotificationCenterModal } from './NotificationCenterModal';
 import { SchoolIllustration } from './SchoolIllustration';
 import { TeacherOverviewAnalytics } from './TeacherOverviewAnalytics';
 import { StudentLeaderboardView } from './StudentLeaderboardView';
+import { LearningGamesView } from './LearningGamesView';
 import {
   Plus,
   BookOpen,
@@ -792,6 +793,15 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
             courses={courses}
           />
         </div>
+      )}
+
+      {/* TAB: TRÒ CHƠI ÔN TẬP (Dành cho Giáo viên & Admin) */}
+      {activeTab === 'games' && (
+        <LearningGamesView
+          currentUser={currentUser}
+          courses={courses}
+          onOpenCourse={(courseId) => onOpenCourseDetail?.(courseId)}
+        />
       )}
 
       {/* 6. TAB: TRỢ LÝ AI */}

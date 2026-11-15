@@ -209,6 +209,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
     const targetAudience = currentUser.role === 'ADMIN' ? newTarget : 'STUDENT';
 
     addSchoolNotice({
+      id: `notice_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       title: newTitle.trim(),
       content: newContent.trim(),
       category: newCategory,
@@ -217,6 +218,7 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
       authorId: currentUser.idUser,
       authorName: currentUser.hoTen,
       authorRole: currentUser.role,
+      createdAt: new Date().toISOString(),
     });
 
     setNewTitle('');
@@ -349,9 +351,9 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             </div>
           ) : (
             <div className="space-y-2.5">
-              {userNotifications.map((notif) => (
+              {userNotifications.map((notif, idx) => (
                 <div
-                  key={notif.id}
+                  key={`${notif.id || 'notif'}_${idx}`}
                   onClick={() => handleNotificationClick(notif)}
                   className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3.5 ${
                     notif.isRead
@@ -574,9 +576,9 @@ export const NotificationCenterModal: React.FC<NotificationCenterModalProps> = (
             </div>
           ) : (
             <div className="space-y-3.5">
-              {filteredNotices.map((item) => (
+              {filteredNotices.map((item, idx) => (
                 <div
-                  key={item.id}
+                  key={`${item.id || 'notice'}_${idx}`}
                   className={`p-5 rounded-2xl bg-white border transition-all ${
                     item.pinned
                       ? 'border-amber-300 shadow-sm bg-gradient-to-br from-amber-50/30 to-white'

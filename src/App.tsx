@@ -20,6 +20,7 @@ import { AdminDataManagementModal } from './components/AdminDataManagementModal'
 import { ProfileUpdateModal } from './components/ProfileUpdateModal';
 import { CourseEditorModal } from './components/CourseEditorModal';
 import { StudentLeaderboardView } from './components/StudentLeaderboardView';
+import { LearningGamesView } from './components/LearningGamesView';
 import { checkNewAchievementsAndCertificates, BadgeItem } from './lib/achievements';
 import { checkAndDispatchCourseNotifications, checkAndDispatchAccountNotifications } from './lib/notificationEngine';
 import { checkSupabaseConnection } from './lib/supabaseClient';
@@ -1489,6 +1490,9 @@ export default function App() {
     } else if (tabId === 'leaderboard') {
       setActiveTab('leaderboard');
       setActiveLearningCourseId(null);
+    } else if (tabId === 'games') {
+      setActiveTab('games');
+      setActiveLearningCourseId(null);
     } else if (tabId === 'notifications') {
       setActiveTab('notifications');
       setActiveLearningCourseId(null);
@@ -1690,6 +1694,20 @@ export default function App() {
               quizStatus={effectiveQuizStatus}
               registeredIds={effectiveRegisteredIds}
               onStartLearning={handleStartLearning}
+            />
+          ) : activeTab === 'games' ? (
+            /* Interactive Learning Games Tab View (Student, Testing Mode, and Guest) */
+            <LearningGamesView
+              currentUser={currentUser}
+              courses={courses}
+              isTeacherTestingMode={isTeacherTestingMode}
+              onOpenCourse={(courseId) => {
+                if (currentUser) {
+                  handleStartLearning(courseId);
+                } else {
+                  setDetailCourseId(courseId);
+                }
+              }}
             />
           ) : (
             /* Student / Public View */

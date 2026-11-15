@@ -614,11 +614,12 @@ app.get("/api/app-state", async (req, res) => {
     const unansweredQaCount = qaList.filter((q: any) => q && !(q.answers || []).some((a: any) => a.authorRole === "TEACHER" || a.authorRole === "ADMIN")).length;
 
     const adminProfile = await readFsDoc<{ avatar?: string; customPass?: string; hoTen?: string; chiDoan?: string }>("admin_profile", { avatar: "", customPass: "" });
-    const [unlockedBadgesDoc, seenCertsDoc, studyActivityDoc, dailyStudyDoc] = await Promise.all([
+    const [unlockedBadgesDoc, seenCertsDoc, studyActivityDoc, dailyStudyDoc, learningGamesDoc] = await Promise.all([
       readFsDoc<any>("unlocked_badges", {}),
       readFsDoc<any>("seen_certificates", {}),
       readFsDoc<any>("study_activity_timestamps", {}),
       readFsDoc<any>("daily_study_log", {}),
+      readFsDoc<any>("learning_games", { items: [] }),
     ]);
 
     const adminAccount = {
@@ -633,6 +634,10 @@ app.get("/api/app-state", async (req, res) => {
       isProtected: true,
     };
 
+    const learningGames = Array.isArray(learningGamesDoc?.items)
+      ? learningGamesDoc.items
+      : (Array.isArray(learningGamesDoc) ? learningGamesDoc : []);
+
     return res.json({
       success: true,
       courses,
@@ -646,6 +651,7 @@ app.get("/api/app-state", async (req, res) => {
       seenCertificates: seenCertsDoc?.data || seenCertsDoc || {},
       studyActivityTimestamps: studyActivityDoc?.data || studyActivityDoc || {},
       dailyStudyLog: dailyStudyDoc?.data || dailyStudyDoc?.payload || dailyStudyDoc || {},
+      learningGames,
       admin: adminAccount,
       admins: [adminAccount],
       teachers: db.teachers || [],
@@ -854,7 +860,7 @@ const ALLOWED_KV_KEYS = new Set([
   "enrollments", "progress", "certificates", "attendanceLogs", "qa_questions",
   "notifications", "dismissed_notifications", "school_notices", "daily_study_log",
   "quiz_status", "unlocked_badges", "seen_certificates", "study_activity_timestamps",
-  "active_sessions", "passwords", "app_settings"
+  "active_sessions", "passwords", "app_settings", "learning_games"
 ]);
 
 // In-Memory store for fast fallback when Supabase is not configured or offline
@@ -884,6 +890,7 @@ inMemoryStore.set("certificates", { payload: [] });
 inMemoryStore.set("attendanceLogs", { payload: [] });
 inMemoryStore.set("qa_questions", { items: [] });
 inMemoryStore.set("notifications", { payload: [] });
+inMemoryStore.set("learning_games", { items: [] });
 inMemoryStore.set("admin_profile", { hoTen: "Administrator", chiDoan: "BGH", avatar: "", customPass: "" });
 
 const DEMO_ACCOUNT_IDS = new Set(["gv.demo", "gv.mai", "hs.demo", "hs.nam"]);
@@ -1459,7 +1466,7 @@ export async function pushToGoogleSheetsImmediate(_reason?: string){ return fals
 const CLIENT_KV_KEYS = new Set([
   "courses","accounts","admin_profile","pendingRegistrations","resetPasswordRequests","enrollments","progress",
   "certificates","attendanceLogs","qa_questions","notifications","dismissed_notifications","school_notices",
-  "daily_study_log","quiz_status","passwords","unlocked_badges","seen_certificates","study_activity_timestamps","app_settings"
+  "daily_study_log","quiz_status","passwords","unlocked_badges","seen_certificates","study_activity_timestamps","app_settings","learning_games"
 ]);
 app.get("/api/lms-data/bootstrap", async (_req, res) => {
   const unwrap = (x: any) => Array.isArray(x) ? x : (Array.isArray(x?.items) ? x.items : Array.isArray(x?.payload) ? x.payload : []);
@@ -1480,6 +1487,7 @@ app.get("/api/lms-data/bootstrap", async (_req, res) => {
       qaQuestions: unwrap(inMemoryStore.get("qa_questions")),
       notifications: unwrap(inMemoryStore.get("notifications")),
       schoolNotices: unwrap(inMemoryStore.get("school_notices")),
+      learningGames: unwrap(inMemoryStore.get("learning_games")),
       dailyStudyLog: daily?.payload || daily || {},
       unlockedBadges: inMemoryStore.get("unlocked_badges") || {},
       seenCertificates: inMemoryStore.get("seen_certificates") || {},
@@ -1516,6 +1524,7 @@ app.get("/api/lms-data/bootstrap", async (_req, res) => {
       qaQuestions: unwrap(map.qa_questions),
       notifications: unwrap(map.notifications),
       schoolNotices: unwrap(map.school_notices),
+      learningGames: unwrap(map.learning_games),
       dailyStudyLog: map.daily_study_log?.payload || map.daily_study_log || {},
       unlockedBadges: map.unlocked_badges || {},
       seenCertificates: map.seen_certificates || {},
@@ -6461,6 +6470,131 @@ TUYỆT ĐỐI KHÔNG thêm thắt các đoạn hội thoại dẫn dắt. Chỉ
       success: false,
       message: "Lỗi kết nối Trợ lý AI: " + (err?.message || "Lỗi server"),
     });
+  }
+});
+
+// --- LEARNING GAMES API (/api/games, POST /api/games, DELETE /api/games/:id) ---
+function detectGamePlatformServer(rawUrl: string): string {
+  const lower = String(rawUrl || "").toLowerCase();
+  if (lower.includes("wordwall.net")) return "Wordwall";
+  if (lower.includes("kahoot.it") || lower.includes("kahoot.com")) return "Kahoot";
+  if (lower.includes("quizizz.com") || lower.includes("wayground.com")) return "Quizizz";
+  if (lower.includes("quizlet.com")) return "Quizlet";
+  if (lower.includes("blooket.com")) return "Blooket";
+  if (lower.includes("gimkit.com")) return "Gimkit";
+  if (lower.includes("baamboozle.com")) return "Baamboozle";
+  return "Other";
+}
+
+function normalizeGameList(rawDoc: any): any[] {
+  const list = Array.isArray(rawDoc?.items)
+    ? rawDoc.items
+    : (Array.isArray(rawDoc) ? rawDoc : []);
+  return list.filter((g: any) => g && typeof g === "object" && g.title && g.url);
+}
+
+app.get("/api/games", async (_req, res) => {
+  try {
+    const doc = await readFsDoc<any>("learning_games", { items: [] });
+    const games = normalizeGameList(doc);
+    return res.json({ success: true, games });
+  } catch (err: any) {
+    console.error("GET /api/games error:", err);
+    return res.status(500).json({ success: false, message: "Lỗi tải danh sách trò chơi", games: [] });
+  }
+});
+
+app.post("/api/games", async (req, res) => {
+  try {
+    const body = req.body?.game && typeof req.body.game === "object" ? req.body.game : (req.body || {});
+    const title = String(body.title || "").trim();
+    const url = String(body.url || "").trim();
+    if (!title || !url) {
+      return res.status(400).json({ success: false, message: "Vui lòng nhập đầy đủ tên trò chơi và đường dẫn URL." });
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ success: false, message: "Đường dẫn trò chơi phải bắt đầu bằng http:// hoặc https://." });
+    }
+
+    const requesterId = String(req.body?.requesterId || body.requesterId || body.authorId || "").trim().toLowerCase();
+    const requesterRole = String(req.body?.requesterRole || body.requesterRole || "").trim().toUpperCase();
+
+    const doc = await readFsDoc<any>("learning_games", { items: [] });
+    const currentGames = normalizeGameList(doc);
+    const incomingId = body.id ? String(body.id).trim() : "";
+    const existingIdx = incomingId ? currentGames.findIndex((g: any) => String(g.id) === incomingId) : -1;
+
+    if (existingIdx >= 0) {
+      const existing = currentGames[existingIdx];
+      const existingAuthor = String(existing.authorId || "").trim().toLowerCase();
+      if (requesterRole && requesterRole !== "ADMIN" && requesterId && existingAuthor && existingAuthor !== requesterId) {
+        return res.status(403).json({ success: false, message: "Bạn chỉ có quyền chỉnh sửa trò chơi do mình tạo." });
+      }
+    }
+
+    const now = new Date().toISOString();
+    const platform = body.platform && String(body.platform).trim()
+      ? String(body.platform).trim()
+      : detectGamePlatformServer(url);
+
+    const gameObj = {
+      id: existingIdx >= 0 ? currentGames[existingIdx].id : (incomingId || `game_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`),
+      title,
+      url,
+      embedUrl: body.embedUrl ? String(body.embedUrl).trim() : "",
+      platform,
+      grade: String(body.grade || "Khối 10").trim(),
+      subject: String(body.subject || "Khoa học tự nhiên").trim(),
+      courseId: body.courseId ? String(body.courseId).trim() : "",
+      courseTitle: body.courseTitle ? String(body.courseTitle).trim() : "",
+      description: body.description ? String(body.description).trim() : "",
+      authorId: existingIdx >= 0 ? currentGames[existingIdx].authorId : String(body.authorId || requesterId || "teacher").trim(),
+      authorName: existingIdx >= 0 ? currentGames[existingIdx].authorName : String(body.authorName || "Giáo viên").trim(),
+      createdAt: existingIdx >= 0 ? (currentGames[existingIdx].createdAt || now) : (body.createdAt || now),
+      updatedAt: now,
+    };
+
+    const nextGames = existingIdx >= 0
+      ? currentGames.map((g: any, idx: number) => (idx === existingIdx ? gameObj : g))
+      : [gameObj, ...currentGames];
+
+    await writeFsDoc("learning_games", { items: nextGames });
+    return res.json({ success: true, game: gameObj, games: nextGames });
+  } catch (err: any) {
+    console.error("POST /api/games error:", err);
+    return res.status(500).json({ success: false, message: "Lỗi lưu trò chơi: " + (err?.message || "Lỗi server") });
+  }
+});
+
+app.delete("/api/games/:id", async (req, res) => {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Thiếu mã trò chơi cần xóa." });
+    }
+
+    const requesterId = String(req.query.userId || req.body?.requesterId || "").trim().toLowerCase();
+    const requesterRole = String(req.query.role || req.body?.requesterRole || "").trim().toUpperCase();
+
+    const doc = await readFsDoc<any>("learning_games", { items: [] });
+    const currentGames = normalizeGameList(doc);
+    const target = currentGames.find((g: any) => String(g.id) === id);
+
+    if (!target) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy trò chơi cần xóa.", games: currentGames });
+    }
+
+    const targetAuthor = String(target.authorId || "").trim().toLowerCase();
+    if (requesterRole && requesterRole !== "ADMIN" && requesterId && targetAuthor && targetAuthor !== requesterId) {
+      return res.status(403).json({ success: false, message: "Bạn chỉ có quyền xóa trò chơi do mình tạo." });
+    }
+
+    const nextGames = currentGames.filter((g: any) => String(g.id) !== id);
+    await writeFsDoc("learning_games", { items: nextGames });
+    return res.json({ success: true, deletedId: id, games: nextGames });
+  } catch (err: any) {
+    console.error("DELETE /api/games/:id error:", err);
+    return res.status(500).json({ success: false, message: "Lỗi xóa trò chơi: " + (err?.message || "Lỗi server") });
   }
 });
 

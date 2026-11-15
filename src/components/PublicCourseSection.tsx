@@ -567,79 +567,79 @@ export const PublicCourseSection: React.FC<PublicCourseSectionProps> = ({
                       
                       {/* Status badges top right */}
                       {timeStatus === 'NOT_STARTED' && (
-                        <div className="absolute top-3 right-3 bg-amber-500/95 backdrop-blur-md px-2.5 py-1 rounded-lg text-white font-bold text-xs flex items-center gap-1 shadow-sm">
-                          <Clock className="w-3.5 h-3.5" />
+                        <div className="absolute top-2.5 right-2.5 bg-amber-500/95 backdrop-blur-md px-2 py-0.5 rounded-lg text-white font-bold text-[11px] flex items-center gap-1 shadow-sm">
+                          <Clock className="w-3 h-3" />
                           <span>Chưa mở</span>
                         </div>
                       )}
                       {timeStatus === 'ENDED' && (
-                        <div className="absolute top-3 right-3 bg-slate-700/95 backdrop-blur-md px-2.5 py-1 rounded-lg text-white font-bold text-xs flex items-center gap-1 shadow-sm">
-                          <Clock className="w-3.5 h-3.5" />
+                        <div className="absolute top-2.5 right-2.5 bg-slate-700/95 backdrop-blur-md px-2 py-0.5 rounded-lg text-white font-bold text-[11px] flex items-center gap-1 shadow-sm">
+                          <Clock className="w-3 h-3" />
                           <span>Đã kết thúc</span>
                         </div>
                       )}
 
-                      <div className="absolute bottom-3 left-3 right-3 flex justify-between items-center text-white text-xs font-semibold">
-                        <span className="bg-slate-900/70 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/20">
+                      <div className="absolute bottom-2.5 left-2.5 right-2.5 flex justify-between items-center text-white text-[11px] font-semibold gap-1.5">
+                        <span className="bg-slate-900/75 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/20">
                           {c.lessons.length} bài học
                         </span>
                         {isEnrolled && (
-                          <span className="bg-emerald-600/90 backdrop-blur-md px-2.5 py-1 rounded-md text-white font-bold flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span className="bg-emerald-600/95 backdrop-blur-md px-2 py-0.5 rounded-md text-white font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
                             Đã đăng ký
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="p-3.5 sm:p-4 flex flex-col flex-grow space-y-2.5">
-                      <h3 className="font-bold text-slate-900 text-sm sm:text-[15px] line-clamp-2 leading-snug group-hover:text-blue-700 transition-colors">
+                    <div className="p-3.5 sm:p-4 flex flex-col flex-grow space-y-2">
+                      <h3 className="font-bold text-slate-900 text-sm line-clamp-2 leading-snug group-hover:text-blue-700 transition-colors min-h-[2.45rem]">
                         {c.title}
                       </h3>
 
-                      <div className="flex items-center gap-1.5 text-xs text-rose-600 font-medium">
-                        <UserCircle className="w-4 h-4 shrink-0" />
-                        <span><b>Giáo viên:</b> {c.authorName || 'Chưa cập nhật'}</span>
+                      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-rose-600 font-medium min-w-0">
+                        <UserCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate"><b>Giáo viên:</b> {c.authorName || 'Chưa cập nhật'}</span>
                       </div>
 
                       {/* Course Time Info */}
                       {c.startDate && timeStatus === 'NOT_STARTED' && (
-                        <div className="p-2.5 bg-amber-50 border border-amber-200/80 rounded-xl text-amber-800 text-xs flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                          <div>
-                            <span className="font-bold">Thời gian mở:</span> {formatDateTimeDisplay(c.startDate)}
+                        <div className="p-2 bg-amber-50 border border-amber-200/80 rounded-lg text-amber-800 text-[11px] flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <div className="line-clamp-1">
+                            <span className="font-bold">Mở:</span> {formatDateTimeDisplay(c.startDate)}
                           </div>
                         </div>
                       )}
 
                       {c.endDate && timeStatus === 'ENDED' && (
-                        <div className="p-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 text-xs flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-slate-500 shrink-0" />
-                          <div>
-                            <span className="font-bold">Đã kết thúc lúc:</span> {formatDateTimeDisplay(c.endDate)}
+                        <div className="p-2 bg-slate-100 border border-slate-200 rounded-lg text-slate-700 text-[11px] flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <div className="line-clamp-1">
+                            <span className="font-bold">Kết thúc:</span> {formatDateTimeDisplay(c.endDate)}
                           </div>
                         </div>
                       )}
 
                       {timeStatus === 'ACTIVE' && (c.startDate || c.endDate) && (
-                        <div className="p-2 bg-emerald-50 border border-emerald-200/80 rounded-xl text-emerald-800 text-[11px] flex items-center gap-1.5">
+                        <div className="p-2 bg-emerald-50 border border-emerald-200/80 rounded-lg text-emerald-800 text-[11px] flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span>
-                            {c.endDate ? `Hạn học: Đến ${formatDateTimeDisplay(c.endDate)}` : `Đã mở từ ${formatDateTimeDisplay(c.startDate)}`}
+                          <span className="line-clamp-1">
+                            {c.endDate ? `Hạn học: Đến ${formatDateTimeDisplay(c.endDate)}` : `Mở từ ${formatDateTimeDisplay(c.startDate)}`}
                           </span>
                         </div>
                       )}
 
-                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed flex-grow min-h-[2rem]">
+                      <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-2 leading-relaxed flex-grow min-h-[2rem]">
                         {c.description || 'Chưa có mô tả khóa học.'}
                       </p>
 
                       <div className="pt-2.5 border-t border-slate-100 flex items-center gap-1.5 sm:gap-2">
                         <button
                           onClick={() => onOpenCourseDetail(c.courseId)}
-                          className="flex-1 py-2 px-3 border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="flex-1 py-1.5 px-2.5 border border-slate-200 hover:border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-[11px] sm:text-xs rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer"
                         >
-                          <Info className="w-3.5 h-3.5 text-slate-500" />
+                          <Info className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                           Chi tiết
                         </button>
 
@@ -647,25 +647,25 @@ export const PublicCourseSection: React.FC<PublicCourseSectionProps> = ({
                           timeStatus === 'NOT_STARTED' && !isTeacherOrAdmin ? (
                             <button
                               onClick={() => alert(`Khóa học chưa đến thời gian mở!\nThời gian mở: ${formatDateTimeDisplay(c.startDate)}`)}
-                              className="flex-1 py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              className="flex-1 py-1.5 px-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] sm:text-xs rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer"
                             >
-                              <Clock className="w-3.5 h-3.5" />
+                              <Clock className="w-3.5 h-3.5 shrink-0" />
                               Chưa mở
                             </button>
                           ) : timeStatus === 'ENDED' ? (
                             <button
                               onClick={() => onStartLearning(c.courseId)}
-                              className="flex-1 py-2 px-3 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              className="flex-1 py-1.5 px-2.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-[11px] sm:text-xs rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer"
                             >
-                              <PlayCircle className="w-3.5 h-3.5" />
+                              <PlayCircle className="w-3.5 h-3.5 shrink-0" />
                               Xem lại bài
                             </button>
                           ) : (
                             <button
                               onClick={() => onStartLearning(c.courseId)}
-                              className="flex-1 py-2 px-3 bg-blue-700 hover:bg-blue-800 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                              className="flex-1 py-1.5 px-2.5 bg-blue-700 hover:bg-blue-800 text-white font-bold text-[11px] sm:text-xs rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer"
                             >
-                              <PlayCircle className="w-3.5 h-3.5" />
+                              <PlayCircle className="w-3.5 h-3.5 shrink-0" />
                               Vào học
                             </button>
                           )
@@ -678,9 +678,9 @@ export const PublicCourseSection: React.FC<PublicCourseSectionProps> = ({
                                 onEnroll(c.courseId, c.title);
                               }
                             }}
-                            className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            className="flex-1 py-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] sm:text-xs rounded-lg shadow-xs transition-all flex items-center justify-center gap-1 whitespace-nowrap cursor-pointer"
                           >
-                            <PlusCircle className="w-3.5 h-3.5" />
+                            <PlusCircle className="w-3.5 h-3.5 shrink-0" />
                             Đăng ký
                           </button>
                         )}

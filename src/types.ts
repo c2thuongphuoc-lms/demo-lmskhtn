@@ -304,3 +304,29 @@ export interface SchoolNotice {
   attachments?: { name: string; url: string }[];
 }
 
+export type LearningGamePlatform =
+  | 'Wordwall'
+  | 'Kahoot'
+  | 'Quizizz'
+  | 'Quizlet'
+  | 'Blooket'
+  | 'Gimkit'
+  | 'Baamboozle'
+  | 'Other';
+
+export interface LearningGame {
+  id: string;
+  title: string;
+  url: string;
+  embedUrl?: string;
+  platform: LearningGamePlatform;
+  grade: string;
+  subject: string;
+  courseId?: string;
+  courseTitle?: string;
+  description?: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt?: string;
+}

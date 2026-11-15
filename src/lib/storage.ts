@@ -1,4 +1,4 @@
-import { Course, User, PendingRegistration, ResetPasswordRequest, QaQuestion, QaAnswer } from '../types';
+import { Course, User, PendingRegistration, ResetPasswordRequest, QaQuestion, QaAnswer, LearningGame } from '../types';
 
 /**
  * SUPABASE-ONLY CLIENT DATA ACCESS
@@ -39,6 +39,7 @@ interface Cache {
   unlockedBadges: Record<string, any>;
   seenCertificates: Record<string, string[]>;
   studyActivityTimestamps: Record<string, number>;
+  learningGames: LearningGame[];
 }
 
 const cache: Cache = {
@@ -47,7 +48,7 @@ const cache: Cache = {
   passwords: {}, pendingRegistrations: [], resetPasswordRequests: [], courses: [],
   enrollments: {}, progress: {}, quizStatus: {}, certificates: [], dailyStudyLog: {},
   qaQuestions: [], notifications: [], dismissedNotifications: {}, schoolNotices: [],
-  unlockedBadges: {}, seenCertificates: {}, studyActivityTimestamps: {},
+  unlockedBadges: {}, seenCertificates: {}, studyActivityTimestamps: {}, learningGames: [],
 };
 
 // Clean up any old localStorage artifacts completely as requested: Supabase-only persistence
@@ -178,8 +179,40 @@ export function hydrateStorageFromServer(payload: any): void {
       (q: any) => q && !String(q.id || '').startsWith('q_sample_') && q.authorId !== 'student_sample_1'
     );
   }
-  if (Array.isArray(payload.notifications)) cache.notifications = payload.notifications;
-  if (Array.isArray(payload.schoolNotices)) cache.schoolNotices = payload.schoolNotices;
+  if (Array.isArray(payload.notifications)) {
+    const seenNotifIds = new Set<string>();
+    cache.notifications = payload.notifications
+      .filter((n: any) => n && typeof n === 'object')
+      .map((n: any, idx: number) => {
+        let id = String(n.id || '').trim();
+        if (!id || seenNotifIds.has(id)) {
+          id = `${id || 'notif'}_${idx}_${Date.now()}`;
+        }
+        seenNotifIds.add(id);
+        return {
+          ...n,
+          id,
+          createdAt: n.createdAt || new Date().toISOString(),
+        };
+      });
+  }
+  if (Array.isArray(payload.schoolNotices)) {
+    const seenNoticeIds = new Set<string>();
+    cache.schoolNotices = payload.schoolNotices
+      .filter((n: any) => n && typeof n === 'object')
+      .map((n: any, idx: number) => {
+        let id = String(n.id || '').trim();
+        if (!id || seenNoticeIds.has(id)) {
+          id = `${id || 'notice'}_${idx}_${Date.now()}`;
+        }
+        seenNoticeIds.add(id);
+        return {
+          ...n,
+          id,
+          createdAt: n.createdAt || new Date().toISOString(),
+        };
+      });
+  }
   if (payload.dailyStudyLog && typeof payload.dailyStudyLog === 'object') {
     cache.dailyStudyLog = payload.dailyStudyLog.data || payload.dailyStudyLog.payload || payload.dailyStudyLog;
   }
@@ -191,6 +224,10 @@ export function hydrateStorageFromServer(payload: any): void {
   }
   if (payload.studyActivityTimestamps && typeof payload.studyActivityTimestamps === 'object') {
     cache.studyActivityTimestamps = payload.studyActivityTimestamps.data || payload.studyActivityTimestamps.payload || payload.studyActivityTimestamps;
+  }
+  if (Array.isArray(payload.learningGames)) {
+    cache.learningGames = payload.learningGames.filter((g: any) => g && g.id && g.url);
+    notify('lms-games-updated');
   }
 
   _storageHydrated = true;
@@ -441,15 +478,30 @@ export function getDismissedNotificationIds(userId?:string){ return userId ? (ca
 export function addDismissedNotificationId(id:string,userId?:string){ const k=String(userId||'global').toLowerCase(); cache.dismissedNotifications={...cache.dismissedNotifications,[k]:[...(cache.dismissedNotifications[k]||[]),id]}; persistAsync('dismissed_notifications',cache.dismissedNotifications); }
 export function getStoredNotifications(){ return cache.notifications; }
 export function saveStoredNotifications(notifs:any[]){ cache.notifications=notifs; persistAsync('notifications',{payload:notifs}); notify('lms-notifications-updated'); }
-export function addNotification(notification:any,checkDismissedUserId?:string){ if(checkDismissedUserId && getDismissedNotificationIds(checkDismissedUserId).includes(notification.id)) return; saveStoredNotifications([notification,...cache.notifications.filter(n=>n.id!==notification.id)].slice(0,100)); }
+export function addNotification(notification:any,checkDismissedUserId?:string){
+  const item = {
+    ...notification,
+    id: notification?.id ? String(notification.id) : `notif_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: notification?.createdAt || new Date().toISOString(),
+  };
+  if(checkDismissedUserId && getDismissedNotificationIds(checkDismissedUserId).includes(item.id)) return;
+  saveStoredNotifications([item,...cache.notifications.filter(n=>n.id!==item.id)].slice(0,100));
+}
 export function deleteNotification(id:string,userId?:string){ saveStoredNotifications(cache.notifications.filter(n=>n.id!==id)); }
 export function markNotificationAsRead(id:string){ saveStoredNotifications(cache.notifications.map(n=>n.id===id?{...n,isRead:true}:n)); }
 export function markAllNotificationsAsRead(recipientId:string,role?:string){ saveStoredNotifications(cache.notifications.map(n=>(!recipientId||n.recipientId===recipientId||n.recipientRole===role)?{...n,isRead:true}:n)); }
 export function clearNotificationsForUser(userOrId:any,optionalRole?:string){ const id=typeof userOrId==='string'?userOrId:userOrId?.idUser; saveStoredNotifications(cache.notifications.filter(n=>!(n.recipientId===id && (!optionalRole||n.recipientRole===optionalRole)))); }
 
 export function getStoredSchoolNotices(){ return cache.schoolNotices; }
-export function saveStoredSchoolNotices(notices:any[]){ cache.schoolNotices=notices; persistAsync('school_notices',{items:notices}); notify('lms-notifications-updated'); }
-export function addSchoolNotice(notice:any){ saveStoredSchoolNotices([notice,...cache.schoolNotices.filter(n=>n.id!==notice.id)]); }
+export function saveStoredSchoolNotices(notices:any[]){ cache.schoolNotices=notices; persistAsync('school_notices',{items:notices}); notify('lms-notices-updated'); notify('lms-notifications-updated'); }
+export function addSchoolNotice(notice:any){
+  const item = {
+    ...notice,
+    id: notice?.id ? String(notice.id) : `notice_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: notice?.createdAt || new Date().toISOString(),
+  };
+  saveStoredSchoolNotices([item,...cache.schoolNotices.filter(n=>n.id!==item.id)]);
+}
 export function deleteSchoolNotice(id:string){ saveStoredSchoolNotices(cache.schoolNotices.filter(n=>n.id!==id)); }
 
 export function getStoredUnlockedBadges(userId: string): any {
@@ -473,3 +525,81 @@ export async function fetchQaQuestionsFromApi(courseId?: string, lessonIdx?: num
 export async function fetchPendingSummaryFromApi(role?: string): Promise<any | null> {
   try { const res=await fetch(`/api/pending-summary?role=${encodeURIComponent(role||'')}`); if(!res.ok)return null; return await res.json(); } catch { return null; }
 }
+
+export function getStoredLearningGames(): LearningGame[] {
+  return cache.learningGames || [];
+}
+
+export function saveStoredLearningGames(games: LearningGame[], skipRemotePersist = false): void {
+  const clean = (games || []).filter((g) => g && g.id && g.url);
+  cache.learningGames = clean;
+  if (!skipRemotePersist) {
+    persistAsync('learning_games', { items: clean });
+  }
+  notify('lms-games-updated');
+}
+
+export async function fetchLearningGamesFromApi(): Promise<LearningGame[]> {
+  try {
+    const res = await fetch('/api/games');
+    if (!res.ok) return getStoredLearningGames();
+    const data = await res.json();
+    if (data?.success && Array.isArray(data.games)) {
+      cache.learningGames = data.games.filter((g: any) => g && g.id && g.url);
+      notify('lms-games-updated');
+      return cache.learningGames;
+    }
+  } catch (err) {
+    console.warn('fetchLearningGamesFromApi fallback to cache:', err);
+  }
+  return getStoredLearningGames();
+}
+
+export async function upsertLearningGameApi(
+  gamePayload: Partial<LearningGame>,
+  user?: User | null
+): Promise<{ success: boolean; game?: LearningGame; games?: LearningGame[]; message?: string }> {
+  const res = await fetch('/api/games', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...gamePayload,
+      requesterId: user?.idUser || gamePayload.authorId || '',
+      requesterRole: user?.role || '',
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.message || `Không thể lưu trò chơi (${res.status})`);
+  }
+  if (Array.isArray(data.games)) {
+    saveStoredLearningGames(data.games, true);
+  } else if (data.game) {
+    const next = [data.game, ...cache.learningGames.filter((g) => g.id !== data.game.id)];
+    saveStoredLearningGames(next, true);
+  }
+  return data;
+}
+
+export async function deleteLearningGameApi(
+  id: string,
+  user?: User | null
+): Promise<{ success: boolean; games?: LearningGame[]; message?: string }> {
+  const qs = new URLSearchParams();
+  if (user?.idUser) qs.set('userId', user.idUser);
+  if (user?.role) qs.set('role', user.role);
+  const res = await fetch(`/api/games/${encodeURIComponent(id)}?${qs.toString()}`, {
+    method: 'DELETE',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data?.success) {
+    throw new Error(data?.message || `Không thể xóa trò chơi (${res.status})`);
+  }
+  if (Array.isArray(data.games)) {
+    saveStoredLearningGames(data.games, true);
+  } else {
+    saveStoredLearningGames(cache.learningGames.filter((g) => g.id !== id), true);
+  }
+  return data;
+}
+
