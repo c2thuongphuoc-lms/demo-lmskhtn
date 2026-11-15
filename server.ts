@@ -5641,8 +5641,8 @@ app.post("/api/certificates/issue", async (req, res) => {
 
     const certCfg = course.certificateConfig || {
       enabled: true,
-      parentOrganization: "ĐOÀN TNCS HỒ CHÍ MINH",
-      organization: "TRƯỜNG THPT NGUYỄN QUANG DIÊU",
+      parentOrganization: "UBND XÃ THƯỜNG PHƯỚC",
+      organization: "TRƯỜNG THCS THƯỜNG PHƯỚC",
       signerTitle: "GIÁO VIÊN",
     };
 
@@ -5650,7 +5650,7 @@ app.post("/api/certificates/issue", async (req, res) => {
     const day = String(now.getDate()).padStart(2, "0");
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const year = now.getFullYear();
-    const formattedDateStr = `Tân An, ngày ${day} tháng ${month} năm ${year}`;
+    const formattedDateStr = `Thường Phước, ngày ${day} tháng ${month} năm ${year}`;
 
     const certId = `CERT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -5671,8 +5671,8 @@ app.post("/api/certificates/issue", async (req, res) => {
       courseTitle: course.title,
       issueDate: now.toISOString(),
       formattedDateStr,
-      parentOrganization: certCfg.parentOrganization || "ĐOÀN TNCS HỒ CHÍ MINH",
-      organization: certCfg.organization || "TRƯỜNG THPT NGUYỄN QUANG DIÊU",
+      parentOrganization: certCfg.parentOrganization || "UBND XÃ THƯỜNG PHƯỚC",
+      organization: certCfg.organization || "TRƯỜNG THCS THƯỜNG PHƯỚC",
       signerTitle: certCfg.signerTitle || "GIÁO VIÊN",
       delegateTitle: certCfg.delegateTitle || "",
       signerName: certCfg.signerName || course.authorName || "Giáo viên hướng dẫn",

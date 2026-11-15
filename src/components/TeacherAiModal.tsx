@@ -108,9 +108,9 @@ Link Slide PPT / Google Slides: https://docs.google.com/presentation/d/2sample_s
 Thời gian học tối thiểu (phút): 40
 
 V. CẤP GIẤY CHỨNG NHẬN HOÀN THÀNH KHÓA HỌC
-Tên Đơn vị chủ quản: SỞ GIÁO DỤC VÀ ĐÀO TẠO TỈNH AN GIANG
-Tên Đơn vị trực tiếp: TRƯỜNG THPT NGUYỄN QUANG DIÊU
-Ký hiệu / Hậu tố Số Giấy chứng nhận: NQD-HH12
+Tên Đơn vị chủ quản: UBND XÃ THƯỜNG PHƯỚC
+Tên Đơn vị trực tiếp: TRƯỜNG THCS THƯỜNG PHƯỚC
+Ký hiệu / Hậu tố Số Giấy chứng nhận: GCN/TP
 Chức vụ người ký: HIỆU TRƯỜNG
 Chức vụ người ký thay (nếu có): KT. HIỆU TRƯỜNG - PHÓ HIỆU TRƯỜNG
 Họ tên người ký: Nguyễn Văn A`;
@@ -625,12 +625,12 @@ export const TeacherAiModal: React.FC<TeacherAiModalProps> = ({
         },
         certificateConfig: {
           enabled: parsedCourse.certificateConfig?.enabled ?? true,
-          parentOrganization: parsedCourse.certificateConfig?.parentOrganization || 'SỞ GIÁO DỤC VÀ ĐÀO TẠO TỈNH AN GIANG',
-          organization: parsedCourse.certificateConfig?.organization || 'TRƯỜNG THPT NGUYỄN QUANG DIÊU',
+          parentOrganization: parsedCourse.certificateConfig?.parentOrganization || 'UBND XÃ THƯỜNG PHƯỚC',
+          organization: parsedCourse.certificateConfig?.organization || 'TRƯỜNG THCS THƯỜNG PHƯỚC',
           certNumberSuffix: parsedCourse.certificateConfig?.certNumberSuffix || 'NQD-AI',
           signerTitle: parsedCourse.certificateConfig?.signerTitle || 'HIỆU TRƯỜNG',
           delegateTitle: parsedCourse.certificateConfig?.delegateTitle || '',
-          signerName: parsedCourse.certificateConfig?.signerName || 'Ban BGH Trường THPT NQD',
+          signerName: parsedCourse.certificateConfig?.signerName || 'Ban BGH Trường THCS TP',
           bgTheme: 'blue_sky',
         },
       };

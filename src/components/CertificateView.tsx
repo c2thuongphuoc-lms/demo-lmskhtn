@@ -122,15 +122,15 @@ export const CertificateView: React.FC<CertificateViewProps> = ({
   }, []);
 
   // Derive values from certificate object or preview config
-  const parentOrg = certificate?.parentOrganization || previewConfig?.parentOrganization || 'ĐOÀN TNCS HỒ CHÍ MINH';
-  const org = certificate?.organization || previewConfig?.organization || 'TRƯỜNG THPT NGUYỄN QUANG DIÊU';
+  const parentOrg = certificate?.parentOrganization || previewConfig?.parentOrganization || 'UBND XÃ THƯỜNG PHƯỚC';
+  const org = certificate?.organization || previewConfig?.organization || 'TRƯỜNG THCS THƯỜNG PHƯỚC';
   const studentName = certificate?.studentName || previewStudentName || 'HỌ CỦA VÀ TÊN HỌC VIÊN';
   const studentClass = certificate?.studentClass || previewStudentClass || '10A1';
   const courseTitle = certificate?.courseTitle || previewCourseTitle || 'Chuyển đổi số trong Giáo dục';
-  const formattedDate = certificate?.formattedDateStr || `Tân An, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}`;
+  const formattedDate = certificate?.formattedDateStr || `Thường Phước, ngày ${new Date().getDate()} tháng ${new Date().getMonth() + 1} năm ${new Date().getFullYear()}`;
   const signerTitle = certificate?.signerTitle || previewConfig?.signerTitle || 'GIÁO VIÊN';
   const delegateTitle = certificate?.delegateTitle || previewConfig?.delegateTitle || '';
-  const signerName = certificate?.signerName || previewConfig?.signerName || previewSignerName || 'Nguyễn Phúc Nguyên';
+  const signerName = certificate?.signerName || previewConfig?.signerName || previewSignerName || 'Võ Thị Ngọc Huyền';
   const signatureImg = certificate?.signatureImage || previewConfig?.signatureImage || '';
   const logoImg = certificate?.logoImage || previewConfig?.logoImage || '';
   const logoSize = certificate?.logoSize ?? previewConfig?.logoSize ?? 96;

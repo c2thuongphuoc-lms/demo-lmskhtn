@@ -150,8 +150,8 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
 
   const [certConfig, setCertConfig] = useState<CertificateConfig>({
     enabled: true,
-    parentOrganization: 'ĐOÀN TNCS HỒ CHÍ MINH',
-    organization: 'TRƯỜNG THPT NGUYỄN QUANG DIÊU',
+    parentOrganization: 'UBND XÃ THƯỜNG PHƯỚC',
+    organization: 'TRƯỜNG THCS THƯỜNG PHƯỚC',
     signerTitle: 'GIÁO VIÊN',
     signerName: currentUser?.fullName || currentUser?.hoTen || '',
     signatureImage: '',
@@ -229,8 +229,8 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
         const cert = courseToEdit.certificateConfig || {};
         setCertConfig({
           enabled: cert.enabled !== false,
-          parentOrganization: cert.parentOrganization || 'ĐOÀN TNCS HỒ CHÍ MINH',
-          organization: cert.organization || 'TRƯỜNG THPT NGUYỄN QUANG DIÊU',
+          parentOrganization: cert.parentOrganization || 'UBND XÃ THƯỜNG PHƯỚC',
+          organization: cert.organization || 'TRƯỜNG THCS THƯỜNG PHƯỚC',
           signerTitle: cert.signerTitle || 'GIÁO VIÊN',
           delegateTitle: cert.delegateTitle || '',
           signerName: cert.signerName || currentUser?.fullName || currentUser?.hoTen || courseToEdit.authorName || '',
@@ -275,8 +275,8 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
 
         setCertConfig({
           enabled: true,
-          parentOrganization: 'ĐOÀN TNCS HỒ CHÍ MINH',
-          organization: 'TRƯỜNG THPT NGUYỄN QUANG DIÊU',
+          parentOrganization: 'UBND XÃ THƯỜNG PHƯỚC',
+          organization: 'TRƯỜNG THCS THƯỜNG PHƯỚC',
           signerTitle: 'GIÁO VIÊN',
           delegateTitle: '',
           signerName: currentUser?.fullName || currentUser?.hoTen || '',
@@ -1846,7 +1846,7 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
                       type="text"
                       value={certConfig.parentOrganization}
                       onChange={(e) => setCertConfig({ ...certConfig, parentOrganization: e.target.value })}
-                      placeholder="VD: ĐOÀN TNCS HỒ CHÍ MINH"
+                      placeholder="VD: UBND XÃ THƯỜNG PHƯỚC"
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                     />
                   </div>
@@ -1859,7 +1859,7 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
                       type="text"
                       value={certConfig.organization}
                       onChange={(e) => setCertConfig({ ...certConfig, organization: e.target.value })}
-                      placeholder="VD: TRƯỜNG THPT NGUYỄN QUANG DIÊU"
+                      placeholder="VD: TRƯỜNG THCS THƯỜNG PHƯỚC"
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                     />
                   </div>
@@ -1872,7 +1872,7 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
                       type="text"
                       value={certConfig.certNumberSuffix || ''}
                       onChange={(e) => setCertConfig({ ...certConfig, certNumberSuffix: e.target.value })}
-                      placeholder="Mặc định: GCN/ĐTN (VD: GCN-ĐTN, GCN-THPT,...)"
+                      placeholder="Mặc định: GCN/ĐTN (VD: GCN-ĐTN, GCN-THCS,...)"
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
                     />
                   </div>
@@ -2195,8 +2195,8 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
           const cert = prefilledCourse.certificateConfig || {};
           setCertConfig({
             enabled: cert.enabled !== false,
-            parentOrganization: cert.parentOrganization || 'SỞ GIÁO DỤC VÀ ĐÀO TẠO TỈNH AN GIANG',
-            organization: cert.organization || 'TRƯỜNG THPT NGUYỄN QUANG DIÊU',
+            parentOrganization: cert.parentOrganization || 'UBND XÃ THƯỜNG PHƯỚC',
+            organization: cert.organization || 'TRƯỜNG THCS THƯỜNG PHƯỚC',
             signerTitle: cert.signerTitle || 'HIỆU TRƯỜNG',
             delegateTitle: cert.delegateTitle || '',
             signerName: cert.signerName || currentUser?.fullName || currentUser?.hoTen || prefilledCourse.authorName || '',
