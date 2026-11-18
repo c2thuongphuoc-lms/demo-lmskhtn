@@ -93,43 +93,50 @@ export function cleanLatexToWordMath(str: string): string {
   return text;
 }
 
-export async function generateExamDocxBlob(examText: string, title = 'Đề thi đã chuẩn hóa'): Promise<Blob> {
+export async function generateExamDocxBlob(
+  examText: string,
+  title = 'Đề thi đã chuẩn hóa',
+  options?: { includeHeader?: boolean }
+): Promise<Blob> {
   const lines = examText.split('\n');
   const children: (Paragraph | Table)[] = [];
+  const includeHeader = options?.includeHeader !== false && Boolean(title?.trim());
 
-  // Document Title Header
-  children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: title.toUpperCase(),
-          bold: true,
-          size: 28, // 14pt
-          font: 'Times New Roman',
-          color: '1E3A8A', // Deep Blue
-        }),
-      ],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 200, before: 100 },
-    })
-  );
+  if (includeHeader) {
+    // Document Title Header
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: title.toUpperCase(),
+            bold: true,
+            size: 28, // 14pt
+            font: 'Times New Roman',
+            color: '1E3A8A', // Deep Blue
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 200, before: 100 },
+      })
+    );
 
-  children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: 'SỞ GIÁO DỤC VÀ ĐÀO TẠO TỈNH AN GIANG • TRƯỜNG THPT NGUYỄN QUANG DIÊU',
-          italics: true,
-          bold: true,
-          size: 20, // 10pt
-          font: 'Times New Roman',
-          color: '475569',
-        }),
-      ],
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
-    })
-  );
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'SỞ GIÁO DỤC VÀ ĐÀO TẠO TỈNH AN GIANG • TRƯỜNG THPT NGUYỄN QUANG DIÊU',
+            italics: true,
+            bold: true,
+            size: 20, // 10pt
+            font: 'Times New Roman',
+            color: '475569',
+          }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 400 },
+      })
+    );
+  }
 
   let inTableMode = false;
   let tableRows: string[] = [];

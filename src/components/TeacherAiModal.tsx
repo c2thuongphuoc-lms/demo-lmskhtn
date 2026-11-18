@@ -730,7 +730,7 @@ export const TeacherAiModal: React.FC<TeacherAiModalProps> = ({
   const handleDownloadExamDocx = async () => {
     if (!resultText) return;
     try {
-      const blob = await generateExamDocxBlob(resultText, activeTab === 'STANDARDIZE' ? 'De_Thi_Chuan_Hoa_KHTN' : 'De_Thi_Bien_Soan_KHTN');
+      const blob = await generateExamDocxBlob(resultText, '', { includeHeader: false });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
