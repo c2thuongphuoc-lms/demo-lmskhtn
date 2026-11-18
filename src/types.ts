@@ -175,6 +175,8 @@ export interface Course {
   endDate?: string;
   authorId: string;
   authorName: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface LessonProgress {

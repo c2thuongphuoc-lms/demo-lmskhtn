@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Course, User } from '../types';
 import { X, UserCircle, BookOpen, CheckCircle2, Circle, Award, PlayCircle, FileCheck2, Lock, Clock, Trophy, Video, ExternalLink } from 'lucide-react';
 import { getCourseTimeStatus, formatDateTimeDisplay, getTimeRemainingText } from '../lib/courseTime';
+import { getLessonRequiredSeconds } from '../lib/storage';
 import { LeaderboardModal } from './LeaderboardModal';
 
 interface CourseDetailModalProps {
@@ -167,8 +168,8 @@ export const CourseDetailModal: React.FC<CourseDetailModalProps> = ({
             <ul className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
               {course.lessons.map((l, idx) => {
                 const pObj = progress[`LESSON_${idx}`] || { watchedSec: 0 };
-                const reqSec = (l.duration || 1) >= 30 ? (l.duration || 1) : (l.duration || 1) * 60;
-                const isDone = pObj.isCompleted || (pObj.watchedSec && pObj.watchedSec >= reqSec);
+                const reqSec = getLessonRequiredSeconds(l.duration);
+                const isDone = Boolean(pObj.isCompleted) || (reqSec === 0 ? Boolean(progress[`LESSON_${idx}`]) : Boolean(pObj.watchedSec && pObj.watchedSec >= reqSec));
                 const ex = l.exerciseConfig || {};
                 const exProg = progress[`LESSON_EXERCISE_${idx}`] || { attempts: 0, lastScore: 0, passed: false };
 

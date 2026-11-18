@@ -45,6 +45,7 @@ import { getCourseTimeStatus, formatDateTimeDisplay } from '../lib/courseTime';
 import {
   getStoredCourses,
   saveStoredCourses,
+  sortCoursesOldestToNewest,
   deleteStoredCertificatesByCourse,
   getStoredAccounts,
   getStoredQuizStatus,
@@ -357,38 +358,55 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
         setAvgScore('0.0/10');
       }
 
-      // Compute Attendance/Completion Rate
-      let totalLessonSlots = 0;
-      let totalCompletedLessons = 0;
-
-      targetCourses.forEach((c) => {
-        const numLessons = (c.lessons || []).length;
-        if (numLessons > 0) {
-          allStudents.forEach((student) => {
-            const sId = String(student.idUser).trim().toLowerCase();
-            const sProgObj = (progress[student.idUser] && progress[student.idUser][c.courseId]) ||
-              (progress[sId] && progress[sId][c.courseId]) || {};
-
-            const isEnrolled = (allEnroll[student.idUser] || allEnroll[sId] || []).includes(c.courseId) ||
-              Object.keys(sProgObj).length > 0;
-
-            if (isAdmin || isEnrolled) {
-              totalLessonSlots += numLessons;
-              (c.lessons || []).forEach((lesson) => {
-                if (sProgObj[lesson.lessonId]?.completed || sProgObj[lesson.lessonId]?.isCompleted) {
-                  totalCompletedLessons += 1;
-                }
-              });
+      // Compute Attendance Rate from real attendance logs first, falling back to lesson completion
+      let computedFromLogs = false;
+      try {
+        if (targetCourseIds.length > 0) {
+          const attRes = await fetch(`/api/attendance/summary?courseIds=${encodeURIComponent(targetCourseIds.join(','))}`);
+          if (attRes.ok) {
+            const attData = await attRes.json();
+            if (attData?.success && Number(attData.totalExpectedSlots) > 0) {
+              setAttendanceRate(`${Number(attData.attendanceRatePercent).toFixed(1)}%`);
+              computedFromLogs = true;
             }
-          });
+          }
         }
-      });
+      } catch {}
 
-      if (totalLessonSlots > 0) {
-        const rate = (totalCompletedLessons / totalLessonSlots) * 100;
-        setAttendanceRate(`${rate.toFixed(1)}%`);
-      } else {
-        setAttendanceRate('0.0%');
+      if (!computedFromLogs) {
+        let totalLessonSlots = 0;
+        let totalCompletedLessons = 0;
+
+        targetCourses.forEach((c) => {
+          const numLessons = (c.lessons || []).length;
+          if (numLessons > 0) {
+            allStudents.forEach((student) => {
+              const sId = String(student.idUser).trim().toLowerCase();
+              const sProgObj = (progress[student.idUser] && progress[student.idUser][c.courseId]) ||
+                (progress[sId] && progress[sId][c.courseId]) || {};
+
+              const isEnrolled = (allEnroll[student.idUser] || allEnroll[sId] || []).includes(c.courseId) ||
+                Object.keys(sProgObj).length > 0;
+
+              if (isAdmin || isEnrolled) {
+                totalLessonSlots += numLessons;
+                (c.lessons || []).forEach((lesson, idx) => {
+                  const lProg = sProgObj[`LESSON_${idx}`] || (lesson.lessonId ? sProgObj[lesson.lessonId] : undefined);
+                  if (lProg?.completed || lProg?.isCompleted) {
+                    totalCompletedLessons += 1;
+                  }
+                });
+              }
+            });
+          }
+        });
+
+        if (totalLessonSlots > 0) {
+          const rate = (totalCompletedLessons / totalLessonSlots) * 100;
+          setAttendanceRate(`${rate.toFixed(1)}%`);
+        } else {
+          setAttendanceRate('0.0%');
+        }
       }
     };
 
@@ -515,7 +533,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
   // Filter courses by Grade, Time Status, and Search query
   const filteredCourses = useMemo(() => {
-    return ownedCourses.filter((c) => {
+    const matching = ownedCourses.filter((c) => {
       // Grade filter
       if (gradeFilter !== 'ALL') {
         const titleUpper = (c.title || '').toUpperCase();
@@ -550,6 +568,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
       return true;
     });
+    return sortCoursesOldestToNewest(matching);
   }, [ownedCourses, gradeFilter, timeStatusFilter, searchQuery]);
 
   const teacherStudentCount = studentCount > 0 ? studentCount : 38;
@@ -679,7 +698,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </div>
               <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold text-amber-700 min-w-0">
                 <span className="shrink-0 text-amber-600">➔</span>
-                <span className="truncate">Tỷ lệ hoàn thành bài học thực tế</span>
+                <span className="truncate">Dựa trên dữ liệu điểm danh thực tế</span>
               </div>
             </div>
           </div>

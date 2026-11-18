@@ -6,7 +6,7 @@ import { AiTutorChat } from './AiTutorChat';
 import { LeaderboardModal } from './LeaderboardModal';
 import { AttendanceExportModal } from './AttendanceExportModal';
 import { LessonQaSection } from './LessonQaSection';
-import { getStoredCertificates, saveStoredCertificate, saveStoredDailyStudyTime, deleteStoredCertificateForUserCourse, deleteStoredQuizStatus, deleteStoredQuizProgress } from '../lib/storage';
+import { getStoredCertificates, saveStoredCertificate, saveStoredDailyStudyTime, deleteStoredCertificateForUserCourse, deleteStoredQuizStatus, deleteStoredQuizProgress, getLessonRequiredSeconds } from '../lib/storage';
 import { getCourseTimeStatus, formatDateTimeDisplay, getTimeRemainingText } from '../lib/courseTime';
 import {
   ArrowLeft,
@@ -387,7 +387,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
 
       if (vActive === 'STUDY' && curLesson && cId && watched > 0) {
         const saved = curProgress[cId]?.[`LESSON_${curIdx}`] || {};
-        const reqSec = (curLesson.duration || 1) >= 30 ? (curLesson.duration || 1) : (curLesson.duration || 1) * 60;
+        const reqSec = getLessonRequiredSeconds(curLesson.duration);
         const isDone = Boolean(saved.isCompleted || watched >= reqSec);
         const pData = {
           watchedSec: watched,
@@ -448,9 +448,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
           const oldLessonIdx = parseInt(parts[1], 10);
           if (oldCourseId === course.courseId && !isNaN(oldLessonIdx) && oldLessonIdx !== currentLessonIdx) {
             const oldLesson = course.lessons?.[oldLessonIdx];
-            const oldReqSec = oldLesson
-              ? ((oldLesson.duration || 1) >= 30 ? (oldLesson.duration || 1) : (oldLesson.duration || 1) * 60)
-              : 60;
+            const oldReqSec = oldLesson ? getLessonRequiredSeconds(oldLesson.duration) : 60;
             const oldProg = userProgressRef.current[course.courseId]?.[`LESSON_${oldLessonIdx}`] || {};
             onSaveProgressRef.current?.(`LESSON_${oldLessonIdx}`, {
               watchedSec: timeWatchedSecRef.current,
@@ -479,10 +477,19 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
         handleUserInteraction();
       }
 
-      const d = currentLesson.duration || 1;
-      // Handle both minutes and old seconds data
-      const targetSec = d >= 30 ? d : d * 60;
+      const targetSec = getLessonRequiredSeconds(currentLesson.duration);
       setTargetDurationSec(targetSec);
+
+      if (targetSec === 0) {
+        const progress = userProgressRef.current[course.courseId] || {};
+        const saved = progress[`LESSON_${currentLessonIdx}`] || {};
+        if (!saved.isCompleted) {
+          onSaveProgressRef.current?.(`LESSON_${currentLessonIdx}`, {
+            watchedSec: saved.watchedSec || 0,
+            isCompleted: true,
+          });
+        }
+      }
     } else if (activeView !== 'STUDY') {
       lastLoadedLessonKey.current = null;
     }
@@ -624,12 +631,12 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
             (l.lessonId && courseProgress[l.lessonId]) ||
             (l.id && courseProgress[l.id]) ||
             { watchedSec: 0 };
-          const reqSec = (l.duration || 1) >= 30 ? (l.duration || 1) : (l.duration || 1) * 60;
+          const reqSec = getLessonRequiredSeconds(l.duration);
           const currentSec =
             idx === currentLessonIdx && activeView === 'STUDY'
               ? Math.max(pObj.watchedSec || 0, timeWatchedSec)
               : pObj.watchedSec || 0;
-          return pObj.isCompleted || pObj.completed || currentSec >= reqSec;
+          return pObj.isCompleted || pObj.completed || reqSec === 0 || currentSec >= reqSec;
         });
 
   const areAllExercisesPassed =
@@ -956,12 +963,12 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
     } else if (quizType === 'EXERCISE' && lessonIdx !== null && course.lessons?.[lessonIdx]) {
       const l = course.lessons[lessonIdx];
       const pObj = userProgress[course.courseId]?.[`LESSON_${lessonIdx}`] || { watchedSec: 0 };
-      const reqSec = (l.duration || 1) >= 30 ? (l.duration || 1) : (l.duration || 1) * 60;
+      const reqSec = getLessonRequiredSeconds(l.duration);
       const currentSec =
         lessonIdx === currentLessonIdx && activeView === 'STUDY'
           ? Math.max(pObj.watchedSec || 0, timeWatchedSec)
           : pObj.watchedSec || 0;
-      const isDone = pObj.isCompleted || currentSec >= reqSec;
+      const isDone = pObj.isCompleted || reqSec === 0 || currentSec >= reqSec;
 
       if (!isDone) {
         alert(
@@ -1256,7 +1263,7 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
   const handleBackNavigation = () => {
     if (activeView === 'STUDY' && currentLesson && timeWatchedSec > 0) {
       const saved = userProgress[course.courseId]?.[`LESSON_${currentLessonIdx}`] || {};
-      const reqSec = (currentLesson.duration || 1) >= 30 ? (currentLesson.duration || 1) : (currentLesson.duration || 1) * 60;
+      const reqSec = getLessonRequiredSeconds(currentLesson.duration);
       onSaveProgress(`LESSON_${currentLessonIdx}`, {
         watchedSec: timeWatchedSec,
         isCompleted: Boolean(saved.isCompleted || timeWatchedSec >= reqSec),
@@ -1705,9 +1712,10 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
 
                 {/* Accumulated Study Timer & Memory Notice */}
                 {(() => {
+                  const isNoTimeLimit = targetDurationSec <= 0;
                   const remainingSec = Math.max(0, targetDurationSec - timeWatchedSec);
-                  const isCompletedTime = timeWatchedSec >= targetDurationSec || Boolean(userProgress[course.courseId]?.[`LESSON_${currentLessonIdx}`]?.isCompleted);
-                  const progressPercent = Math.min(100, Math.round((timeWatchedSec / targetDurationSec) * 100));
+                  const isCompletedTime = isNoTimeLimit || timeWatchedSec >= targetDurationSec || Boolean(userProgress[course.courseId]?.[`LESSON_${currentLessonIdx}`]?.isCompleted);
+                  const progressPercent = isNoTimeLimit ? 100 : Math.min(100, Math.round((timeWatchedSec / targetDurationSec) * 100));
 
                   const now = Date.now();
                   const idleSec = Math.floor((now - lastInteractionTime) / 1000);
@@ -1728,12 +1736,21 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
 
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 pt-0.5">
                         <div>
-                          Thời gian đã học: <strong className="text-blue-900 font-bold">{formatTimer(timeWatchedSec)}</strong> / {formatTimer(targetDurationSec)}
+                          {isNoTimeLimit ? (
+                            <>
+                              Thời gian đã học: <strong className="text-blue-900 font-bold">{formatTimer(timeWatchedSec)}</strong>{' '}
+                              <span className="text-slate-500">(Không quy định thời gian tối thiểu)</span>
+                            </>
+                          ) : (
+                            <>
+                              Thời gian đã học: <strong className="text-blue-900 font-bold">{formatTimer(timeWatchedSec)}</strong> / {formatTimer(targetDurationSec)}
+                            </>
+                          )}
                         </div>
                         {isCompletedTime ? (
                           <span className="text-emerald-700 font-bold flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            Đã hoàn thành thời gian yêu cầu
+                            {isNoTimeLimit ? 'Không giới hạn thời gian học' : 'Đã hoàn thành thời gian yêu cầu'}
                           </span>
                         ) : (
                           <div className="text-amber-900 font-bold bg-amber-100/90 px-2.5 py-0.5 rounded-md border border-amber-200">
@@ -2439,12 +2456,12 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                 {course.lessons && course.lessons.map((l, idx) => {
                   const progress = userProgress[course.courseId] || {};
                   const pObj = progress[`LESSON_${idx}`] || { watchedSec: 0 };
-                  const reqSec = (l.duration || 1) >= 30 ? (l.duration || 1) : (l.duration || 1) * 60;
+                  const reqSec = getLessonRequiredSeconds(l.duration);
                   const currentSec =
                     idx === currentLessonIdx && activeView === 'STUDY'
                       ? Math.max(pObj.watchedSec || 0, timeWatchedSec)
                       : pObj.watchedSec || 0;
-                  const contentDone = pObj.isCompleted || currentSec >= reqSec;
+                  const contentDone = pObj.isCompleted || reqSec === 0 || currentSec >= reqSec;
                   const ex = l.exerciseConfig || {};
                   const exProg = progress[`LESSON_EXERCISE_${idx}`] || {};
                   const exPassing = ex.passingScore !== undefined ? Number(ex.passingScore) : 80;
@@ -2471,7 +2488,11 @@ export const LearningWorkspace: React.FC<LearningWorkspaceProps> = ({
                             Bài {idx + 1}: {l.title}
                           </span>
                           <span className="text-[10px] text-slate-500 font-normal">
-                            Thời gian: <strong className={contentDone ? 'text-emerald-700 font-bold' : 'text-blue-700 font-bold'}>{formatTimer(currentSec)}</strong> / {formatTimer(reqSec)}
+                            {reqSec <= 0 ? (
+                              <>Không quy định thời gian</>
+                            ) : (
+                              <>Thời gian: <strong className={contentDone ? 'text-emerald-700 font-bold' : 'text-blue-700 font-bold'}>{formatTimer(currentSec)}</strong> / {formatTimer(reqSec)}</>
+                            )}
                           </span>
                         </div>
                         {contentDone ? (

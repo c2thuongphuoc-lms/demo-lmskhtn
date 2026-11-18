@@ -63,9 +63,15 @@ try {
 
 const notify = (name: string) => { if (typeof window !== 'undefined') window.dispatchEvent(new Event(name)); };
 
+const pendingPayloads = new Map<string, any>();
+const inFlightKeys = new Set<string>();
+const retryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
 async function persist(key: string, data: any): Promise<void> {
   const res = await fetch(`/api/lms-kv/${encodeURIComponent(key)}`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data }),
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data }),
   });
   if (!res.ok) {
     let msg = `Supabase write failed (${res.status})`;
@@ -74,8 +80,57 @@ async function persist(key: string, data: any): Promise<void> {
   }
 }
 
+async function flushKeyQueue(key: string, attempt = 0): Promise<void> {
+  if (inFlightKeys.has(key)) return;
+  if (!pendingPayloads.has(key)) return;
+
+  const payload = pendingPayloads.get(key);
+  pendingPayloads.delete(key);
+  inFlightKeys.add(key);
+
+  try {
+    await persist(key, payload);
+    inFlightKeys.delete(key);
+    // If another write arrived while this request was in flight, flush it next
+    if (pendingPayloads.has(key)) {
+      void flushKeyQueue(key, 0);
+    }
+  } catch (err: any) {
+    inFlightKeys.delete(key);
+    const isTransientFetch =
+      err instanceof TypeError ||
+      /failed to fetch|networkerror|load failed|aborted/i.test(String(err?.message || ''));
+
+    if (isTransientFetch && attempt < 2) {
+      // Keep newer payload if one arrived, otherwise restore current payload for retry
+      if (!pendingPayloads.has(key)) {
+        pendingPayloads.set(key, payload);
+      }
+      const existingTimer = retryTimers.get(key);
+      if (existingTimer) clearTimeout(existingTimer);
+      const delayMs = attempt === 0 ? 450 : 1200;
+      retryTimers.set(
+        key,
+        setTimeout(() => {
+          retryTimers.delete(key);
+          void flushKeyQueue(key, attempt + 1);
+        }, delayMs)
+      );
+      return;
+    }
+
+    console.warn(`[Supabase-only] Sync deferred for ${key}:`, err?.message || err);
+  }
+}
+
 function persistAsync(key: string, data: any) {
-  persist(key, data).catch((err) => console.error(`[Supabase-only] ${key}:`, err));
+  pendingPayloads.set(key, data);
+  const existingTimer = retryTimers.get(key);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    retryTimers.delete(key);
+  }
+  void flushKeyQueue(key, 0);
 }
 
 const DEMO_ACCOUNT_IDS = new Set(['gv.demo', 'gv.mai', 'hs.demo', 'hs.nam']);
@@ -123,7 +178,9 @@ export function hydrateStorageFromServer(payload: any): void {
   if (Array.isArray(payload.pendingRegistrations)) cache.pendingRegistrations = payload.pendingRegistrations;
   if (Array.isArray(payload.resetPasswordRequests)) cache.resetPasswordRequests = payload.resetPasswordRequests;
   if (Array.isArray(payload.courses)) {
-    cache.courses = payload.courses.filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01');
+    cache.courses = sortCoursesOldestToNewest(
+      payload.courses.filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01')
+    );
   }
   if (Array.isArray(payload.enrollments)) {
     const e: Record<string,string[]> = {};
@@ -264,15 +321,54 @@ export function getStoredPasswords(){ return cache.passwords; }
 export function saveStoredPassword(idUser:string,newPass:string){ cache.passwords[String(idUser).toLowerCase()]=newPass; persistAsync('passwords',cache.passwords); }
 export function resetStoredPassword(idUser:string){ delete cache.passwords[String(idUser).toLowerCase()]; persistAsync('passwords',cache.passwords); }
 
+export function getCourseSortTimestamp(course: Partial<Course> & { created_at?: string; updated_at?: string }): number {
+  if (course?.createdAt) {
+    const t = new Date(course.createdAt).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  if (course?.created_at) {
+    const t = new Date(course.created_at).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  const idMatch = String(course?.courseId || '').match(/^CRS-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/i);
+  if (idMatch) {
+    const iso = `${idMatch[1]}-${idMatch[2]}-${idMatch[3]}T${idMatch[4]}:${idMatch[5]}:${idMatch[6]}Z`;
+    const t = new Date(iso).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  if (course?.updatedAt) {
+    const t = new Date(course.updatedAt).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  if (course?.updated_at) {
+    const t = new Date(course.updated_at).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  return 0;
+}
+
+export function sortCoursesOldestToNewest<T = any>(courses: T[]): T[] {
+  return [...(courses || [])].sort((a, b) => {
+    const ta = getCourseSortTimestamp(a as any);
+    const tb = getCourseSortTimestamp(b as any);
+    if (ta !== tb) return ta - tb;
+    return 0;
+  });
+}
+
 export function getStoredCourses(){ return cache.courses; }
 export function saveStoredCourses(courses:Course[]){
-  const clean = (courses || []).filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01');
+  const clean = sortCoursesOldestToNewest(
+    (courses || []).filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01')
+  );
   cache.courses=clean;
   persistAsync('courses',{items:clean});
   notify('courses-updated');
 }
 export function syncStoredCoursesCache(courses: Course[]) {
-  const clean = (courses || []).filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01');
+  const clean = sortCoursesOldestToNewest(
+    (courses || []).filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01')
+  );
   cache.courses = clean;
   notify('courses-updated');
 }
@@ -282,7 +378,7 @@ export function saveStoredEnrollment(userId:string,courseId:string){
   const k=String(userId).trim().toLowerCase();
   const arr=cache.enrollments[k]||[];
   if(!arr.includes(courseId)) cache.enrollments={...cache.enrollments,[k]:[...arr,courseId]};
-  persistAsync('enrollments',{payload:Object.entries(cache.enrollments).flatMap(([idUser,ids])=>ids.map(courseId=>({idUser,courseId,status:'DANG_HOC'})))});
+  persistAsync('enrollments',{payload:[{idUser:k,courseId,status:'DANG_HOC'}]});
 }
 
 export function getUserLocalEnrollments(userId: string): string[] {
@@ -321,8 +417,9 @@ export function getLastUserStudyActivity(userId: string): number {
 export function saveStoredProgress(userId:string,courseId:string,lessonIndex:string|number,progressData:any){
   recordUserStudyActivity(userId);
   const u=String(userId).trim().toLowerCase();
-  cache.progress={...cache.progress,[u]:{...(cache.progress[u]||{}),[courseId]:{...((cache.progress[u]||{})[courseId]||{}),[String(lessonIndex)]:progressData}}};
-  persistAsync('progress',{payload:Object.entries(cache.progress).flatMap(([idUser,courses])=>Object.entries(courses as any).flatMap(([courseId,lessons]:any)=>Object.entries(lessons||{}).map(([lessonKey,progressData])=>({idUser,courseId,lessonKey,progressData,updatedAt:new Date().toISOString()}))))});
+  const lKey=String(lessonIndex);
+  cache.progress={...cache.progress,[u]:{...(cache.progress[u]||{}),[courseId]:{...((cache.progress[u]||{})[courseId]||{}),[lKey]:progressData}}};
+  persistAsync('progress',{payload:[{idUser:u,courseId,lessonKey:lKey,progressData,updatedAt:new Date().toISOString()}]});
 }
 
 export function getUserLocalProgress(userId: string): Record<string, any> {
@@ -602,4 +699,13 @@ export async function deleteLearningGameApi(
   }
   return data;
 }
+
+export function getLessonRequiredSeconds(duration?: number | null): number {
+  if (duration === 0) return 0;
+  const d = duration !== undefined && duration !== null ? Number(duration) : 1;
+  if (isNaN(d) || d < 0) return 60;
+  if (d === 0) return 0;
+  return d >= 30 ? d : d * 60;
+}
+
 

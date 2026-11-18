@@ -559,6 +559,8 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
       },
       certificateConfig: optimizedCertConfig,
       onlineMeetingConfig,
+      createdAt: courseToEdit?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const payload = {
@@ -588,7 +590,7 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
           if (existingIdx >= 0) {
             stored[existingIdx] = savedCourse;
           } else {
-            stored.unshift(savedCourse);
+            stored.push(savedCourse);
           }
           syncStoredCoursesCache(stored);
 
@@ -631,7 +633,7 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
       if (existingIdx >= 0) {
         stored[existingIdx] = courseData;
       } else {
-        stored.unshift(courseData);
+        stored.push(courseData);
       }
       saveStoredCourses(stored);
 
@@ -1008,19 +1010,28 @@ export const CourseEditorModal: React.FC<CourseEditorModalProps> = ({
                         />
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <label className="text-xs font-semibold text-slate-600 shrink-0">
                           Thời gian học tối thiểu (phút):
                         </label>
                         <input
                           type="number"
-                          min={1}
-                          value={l.duration || 1}
-                          onChange={(e) =>
-                            handleLessonChange(idx, 'duration', parseInt(e.target.value) || 1)
-                          }
+                          min={0}
+                          value={l.duration ?? 1}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === '') {
+                              handleLessonChange(idx, 'duration', 0);
+                              return;
+                            }
+                            const parsed = parseInt(raw, 10);
+                            handleLessonChange(idx, 'duration', isNaN(parsed) ? 0 : Math.max(0, parsed));
+                          }}
                           className="w-24 px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
                         />
+                        <span className="text-[11px] text-slate-500">
+                          (Nhập <strong>0</strong> để không quy định thời gian học)
+                        </span>
                       </div>
 
                       {/* Lesson Exercise Configuration */}

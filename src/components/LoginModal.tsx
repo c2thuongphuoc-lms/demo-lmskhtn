@@ -430,7 +430,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       }
     }
 
-    setErrorMsg('Mật khẩu không chính xác hoặc tài khoản chưa được Admin (admin.c2thuongphuoc) phê duyệt!');
+    setErrorMsg('Mật khẩu không chính xác hoặc tài khoản chưa được Admin phê duyệt!');
   };
 
   return (
@@ -458,8 +458,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       {/* 3. Main Content Container:
           - On mobile:
             1. Cố định logo cách lề trên chính xác 35px
-            2. Cố định dòng chữ "© PHÁT TRIỂN BỞI NGUYỄN PHÚC NGUYÊN" cách lề dưới chính xác 35px
-            3. Logo cách hộp gắn nhãn "TRƯỜNG THPT NGUYỄN QUANG DIÊU" 10px
+            2. Cố định dòng chữ "© PHÁT TRIỂN BỞI VÕ THỊ NGỌC HUYỀN" cách lề dưới chính xác 35px
+            3. Logo cách hộp gắn nhãn "TRƯỜNG THCS THƯỜNG PHƯỚC" 10px
           - On desktop: 2-column layout optimized for 1366x600 screen.
       */}
       <div className="relative z-10 w-full max-w-6xl mx-auto min-h-screen min-h-[100dvh] md:min-h-0 flex flex-col justify-start md:justify-between pt-[35px] pb-[70px] md:pb-[35px] px-3 md:py-2 md:px-0 md:my-auto">

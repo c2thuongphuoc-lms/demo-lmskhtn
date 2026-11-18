@@ -943,6 +943,41 @@ async function cleanupDemoDataFromSupabase() {
   }
 }
 
+function getCourseSortTimestamp(course: any): number {
+  if (course?.createdAt) {
+    const t = new Date(course.createdAt).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  if (course?.created_at) {
+    const t = new Date(course.created_at).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  const idMatch = String(course?.courseId || "").match(/^CRS-(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/i);
+  if (idMatch) {
+    const iso = `${idMatch[1]}-${idMatch[2]}-${idMatch[3]}T${idMatch[4]}:${idMatch[5]}:${idMatch[6]}Z`;
+    const t = new Date(iso).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  if (course?.updatedAt) {
+    const t = new Date(course.updatedAt).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  if (course?.updated_at) {
+    const t = new Date(course.updated_at).getTime();
+    if (!Number.isNaN(t) && t > 0) return t;
+  }
+  return 0;
+}
+
+function sortCoursesOldestToNewest<T>(courses: T[]): T[] {
+  return [...(courses || [])].sort((a, b) => {
+    const ta = getCourseSortTimestamp(a);
+    const tb = getCourseSortTimestamp(b);
+    if (ta !== tb) return ta - tb;
+    return 0;
+  });
+}
+
 async function readFsDoc<T>(docName: string, fallback: T): Promise<T> {
   if (initialProbePromise) await initialProbePromise;
   if (canUseSupabase()) {
@@ -950,14 +985,24 @@ async function readFsDoc<T>(docName: string, fallback: T): Promise<T> {
       if (docName === "courses") {
         const { data, error } = await getSupabase()
           .from("lms_courses")
-          .select("course_id, data, updated_at")
-          .order("updated_at", { ascending: false });
+          .select("course_id, data, created_at, updated_at")
+          .order("created_at", { ascending: true });
         if (error) {
           if (isNetworkFetchError(error)) markSupabaseOffline(error.message);
         } else if (data !== null && data !== undefined) {
-          const cleanCourses = (data || [])
-            .map((r: any) => r.data)
-            .filter((c: any) => c && c.courseId && c.courseId !== "course_demo_01");
+          const cleanCourses = sortCoursesOldestToNewest(
+            (data || [])
+              .map((r: any) =>
+                r?.data
+                  ? {
+                      ...r.data,
+                      createdAt: r.data.createdAt || r.created_at,
+                      updatedAt: r.data.updatedAt || r.updated_at,
+                    }
+                  : null
+              )
+              .filter((c: any) => c && c.courseId && c.courseId !== "course_demo_01")
+          );
           return { items: cleanCourses } as T;
         }
       } else if (ALLOWED_KV_KEYS.has(docName)) {
@@ -1506,18 +1551,31 @@ app.get("/api/lms-data/bootstrap", async (_req, res) => {
       return res.json(buildFromMemory());
     }
     const map: any = Object.fromEntries((rows || []).map((r: any) => [r.key, r.data]));
-    const { data: courses, error: cErr } = await getSupabase().from("lms_courses").select("course_id,data,updated_at").order("updated_at", { ascending: false });
+    const { data: courses, error: cErr } = await getSupabase().from("lms_courses").select("course_id,data,created_at,updated_at").order("created_at", { ascending: true });
     if (cErr) {
       if (isNetworkFetchError(cErr)) markSupabaseOffline(cErr.message);
       return res.json(buildFromMemory());
     }
+    const sortedCourses = sortCoursesOldestToNewest(
+      (courses || [])
+        .map((r: any) =>
+          r?.data
+            ? {
+                ...r.data,
+                createdAt: r.data.createdAt || r.created_at,
+                updatedAt: r.data.updatedAt || r.updated_at,
+              }
+            : null
+        )
+        .filter((c: any) => c && c.courseId && c.courseId !== "course_demo_01")
+    );
     return res.json({
       success: true,
       accounts: map.accounts || { teachers: [], students: [] },
       admin: map.admin_profile || null,
       pendingRegistrations: unwrap(map.pendingRegistrations),
       resetPasswordRequests: unwrap(map.resetPasswordRequests),
-      courses: (courses || []).map((r: any) => r.data).filter(Boolean),
+      courses: sortedCourses,
       enrollments: unwrap(map.enrollments),
       progress: unwrap(map.progress),
       certificates: unwrap(map.certificates),
@@ -2541,7 +2599,7 @@ app.post(["/api/courses", "/api/courses/save"], async (req, res) => {
         updatedAt: new Date().toISOString(),
       };
 
-      nextItems = [savedCourse, ...currentItems];
+      nextItems = sortCoursesOldestToNewest([...currentItems, savedCourse]);
     }
 
     // Update in-memory store immediately
@@ -3265,6 +3323,119 @@ app.get("/api/attendance/export/:courseId", async (req, res) => {
   }
 });
 
+// 7.4. ATTENDANCE SUMMARY API
+app.get("/api/attendance/summary", async (req, res) => {
+  try {
+    const db = await getDb();
+    const qsDoc = (await readFsDoc<any>("quiz_status", {})) || {};
+    const logs = db.attendanceLogs || [];
+
+    const rawCourseIds = String(req.query.courseIds || "").trim();
+    const requestedIds = rawCourseIds
+      ? new Set(rawCourseIds.split(",").map((id) => id.trim()).filter(Boolean))
+      : null;
+
+    const targetCourses = (db.courses || []).filter((c) => {
+      if (!c || !c.courseId || c.courseId === "course_demo_01") return false;
+      if (requestedIds && requestedIds.size > 0) {
+        return requestedIds.has(String(c.courseId).trim());
+      }
+      return true;
+    });
+
+    const studentIdSet = new Set(
+      (db.students || []).map((s) => String(s?.idUser || "").trim().toLowerCase()).filter(Boolean)
+    );
+
+    let totalExpectedSlots = 0;
+    let totalAttendedSlots = 0;
+
+    targetCourses.forEach((c) => {
+      const cId = String(c.courseId).trim();
+      const courseLogs = logs.filter((l) => String(l?.courseId || "").trim() === cId);
+      if (courseLogs.length === 0) return;
+
+      const sessionDates = new Set<string>();
+      const attendedPairs = new Set<string>();
+
+      courseLogs.forEach((l) => {
+        let dStr = l.dateStr || "";
+        if (!dStr) {
+          const val = l.createdAt || l.timestamp || "";
+          if (/^\d{4}-\d{2}-\d{2}/.test(val)) {
+            dStr = val.substring(0, 10);
+          } else {
+            const d = new Date(val);
+            if (!isNaN(d.getTime())) {
+              const pad = (n: number) => String(n).padStart(2, "0");
+              dStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+            }
+          }
+        }
+        const uId = String(l?.idUser || "").trim().toLowerCase();
+        if (dStr && uId) {
+          sessionDates.add(dStr);
+          attendedPairs.add(`${uId}:::${dStr}`);
+        }
+      });
+
+      if (sessionDates.size === 0) return;
+
+      const enrolledIds = new Set<string>();
+      (db.enrollments || []).forEach((e) => {
+        if (String(e?.courseId || "").trim() === cId) {
+          const uId = String(e?.idUser || "").trim().toLowerCase();
+          if (uId && (studentIdSet.size === 0 || studentIdSet.has(uId))) {
+            enrolledIds.add(uId);
+          }
+        }
+      });
+      (db.progress || []).forEach((p) => {
+        if (String(p?.courseId || "").trim() === cId) {
+          const uId = String(p?.idUser || "").trim().toLowerCase();
+          if (uId && (studentIdSet.size === 0 || studentIdSet.has(uId))) {
+            enrolledIds.add(uId);
+          }
+        }
+      });
+      Object.entries(qsDoc).forEach(([uKey, uMap]: [string, any]) => {
+        if (uMap && typeof uMap === "object" && uMap[cId]) {
+          const uId = String(uKey).trim().toLowerCase();
+          if (uId && (studentIdSet.size === 0 || studentIdSet.has(uId))) {
+            enrolledIds.add(uId);
+          }
+        }
+      });
+      courseLogs.forEach((l) => {
+        const uId = String(l?.idUser || "").trim().toLowerCase();
+        if (uId && (studentIdSet.size === 0 || studentIdSet.has(uId))) {
+          enrolledIds.add(uId);
+        }
+      });
+
+      if (enrolledIds.size > 0) {
+        totalExpectedSlots += enrolledIds.size * sessionDates.size;
+        totalAttendedSlots += attendedPairs.size;
+      }
+    });
+
+    const attendanceRatePercent =
+      totalExpectedSlots > 0
+        ? Number(((totalAttendedSlots / totalExpectedSlots) * 100).toFixed(1))
+        : 0;
+
+    return res.json({
+      success: true,
+      totalExpectedSlots,
+      totalAttendedSlots,
+      attendanceRatePercent,
+    });
+  } catch (err: any) {
+    console.error("Error computing attendance summary:", err);
+    return res.status(500).json({ success: false, message: err?.message || "Lỗi tính tỷ lệ chuyên cần" });
+  }
+});
+
 // 8. GET TEACHER STATS API
 app.get("/api/teacher/stats/:courseId", async (req, res) => {
   const { courseId } = req.params;
@@ -3364,7 +3535,8 @@ app.get("/api/teacher/stats/:courseId", async (req, res) => {
             const pd = p.progressData;
             if (pd && typeof pd === "object") {
               if (pd.isCompleted || pd.completed) return true;
-              const reqSec = (l.duration || 1) >= 30 ? (l.duration || 1) : (l.duration || 1) * 60;
+              const rawDur = l.duration !== undefined && l.duration !== null ? Number(l.duration) : 1;
+              const reqSec = rawDur === 0 ? 0 : (rawDur >= 30 ? rawDur : rawDur * 60);
               if (Number(pd.watchedSec || 0) >= reqSec) return true;
               if (Number(pd.watchedSec || 0) > 0) return true;
             }
@@ -3653,7 +3825,8 @@ app.get("/api/reports/lms-analytics", async (req, res) => {
                 const pd = p.progressData;
                 if (pd && typeof pd === "object") {
                   if (pd.isCompleted || pd.completed) return true;
-                  const reqSec = (l.duration || 1) >= 30 ? (l.duration || 1) : (l.duration || 1) * 60;
+                  const rawDur = l.duration !== undefined && l.duration !== null ? Number(l.duration) : 1;
+                  const reqSec = rawDur === 0 ? 0 : (rawDur >= 30 ? rawDur : rawDur * 60);
                   if (Number(pd.watchedSec || 0) >= reqSec) return true;
                   if (Number(pd.watchedSec || 0) > 0) return true;
                 }

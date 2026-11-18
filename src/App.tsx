@@ -37,6 +37,7 @@ import {
   hydrateStorageFromServer,
   getStoredNotifications,
   saveStoredCourses,
+  sortCoursesOldestToNewest,
   getStoredEnrollments,
   saveStoredEnrollment,
   getStoredProgress,
@@ -229,8 +230,10 @@ export default function App() {
         const data = await res.json();
         if (data.success) {
           setIsServerConnected(true);
-          const apiCourses = (Array.isArray(data.courses) ? data.courses : [])
-            .filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01');
+          const apiCourses: Course[] = sortCoursesOldestToNewest(
+            (Array.isArray(data.courses) ? data.courses : [])
+              .filter((c: any): c is Course => Boolean(c && c.courseId && c.courseId !== 'course_demo_01'))
+          );
           setCourses(apiCourses);
           hydrateStorageFromServer({ ...data, accounts: { teachers: data.teachers || [], students: data.students || [] } });
 
@@ -416,7 +419,7 @@ export default function App() {
     }
 
     // Phục hồi từ bộ nhớ cục bộ thay vì xóa trắng
-    const storedCourses = getStoredCourses();
+    const storedCourses = sortCoursesOldestToNewest(getStoredCourses());
     if (storedCourses.length > 0) setCourses(storedCourses);
     if (cleanU) {
       setRegisteredIds(getUserLocalEnrollments(cleanU));
@@ -603,135 +606,136 @@ export default function App() {
         console.warn('Backend cloud-sync get-all fetch error:', cloudErr);
       }
 
-      if (pulledData && (Array.isArray(pulledData.teachers) || Array.isArray(pulledData.students))) {
-        const demoAccountIds = new Set(['gv.demo', 'gv.mai', 'hs.demo', 'hs.nam']);
-        const curAcc = getStoredAccounts();
-        const tMap = new Map<string, any>();
-        (curAcc.teachers || []).forEach((t: any) => {
-          if (t?.idUser && !demoAccountIds.has(String(t.idUser).toLowerCase())) {
-            tMap.set(String(t.idUser).toLowerCase(), t);
-          }
-        });
-        const existingTIds = new Set<string>(Array.from(tMap.keys()));
-
-        (pulledData.teachers || []).forEach((t: any) => {
-          let idUser = String(t?.idUser || '').trim();
-          if (demoAccountIds.has(idUser.toLowerCase())) return;
-          const hoTen = String(t?.hoTen || '').trim();
-          const chiDoan = String(t?.chiDoan || t?.toChuyenMon || t?.department || '').trim();
-          if (!idUser && hoTen) {
-            idUser = generateTeacherUsername(hoTen, chiDoan, existingTIds);
-            existingTIds.add(idUser.toLowerCase());
-          }
-          if (idUser && !demoAccountIds.has(idUser.toLowerCase())) {
-            const key = idUser.toLowerCase();
-            const existing = tMap.get(key) || {};
-            tMap.set(key, {
-              ...existing,
-              ...t,
-              idUser: idUser,
-              hoTen: hoTen || existing.hoTen || idUser,
-              chiDoan: chiDoan || existing.chiDoan || 'Giáo viên',
-              defaultPass: t.defaultPass || existing.defaultPass || '123',
-              role: 'TEACHER',
-            });
-          }
-        });
-
-        const sMap = new Map<string, any>();
-        (curAcc.students || []).forEach((s: any) => {
-          if (s?.idUser && !demoAccountIds.has(String(s.idUser).toLowerCase())) {
-            sMap.set(String(s.idUser).toLowerCase(), s);
-          }
-        });
-        const existingSIds = new Set<string>(Array.from(sMap.keys()));
-
-        (pulledData.students || []).forEach((s: any) => {
-          let idUser = String(s?.idUser || '').trim();
-          if (demoAccountIds.has(idUser.toLowerCase())) return;
-          const hoTen = String(s?.hoTen || '').trim();
-          const chiDoan = String(s?.chiDoan || '').trim();
-          const khoi = String(s?.khoi || '').trim();
-          if (!idUser && hoTen) {
-            idUser = generateStudentUsername(hoTen, chiDoan || khoi, existingSIds);
-            existingSIds.add(idUser.toLowerCase());
-          }
-          if (idUser && !demoAccountIds.has(idUser.toLowerCase())) {
-            const key = idUser.toLowerCase();
-            const existing = sMap.get(key) || {};
-            sMap.set(key, {
-              ...existing,
-              ...s,
-              idUser: idUser,
-              hoTen: hoTen || existing.hoTen || idUser,
-              chiDoan: chiDoan || existing.chiDoan || 'Học sinh',
-              khoi: khoi || existing.khoi || '12',
-              defaultPass: s.defaultPass || existing.defaultPass || '123',
-              role: 'STUDENT',
-            });
-          }
-        });
-
-        saveStoredAccounts(Array.from(tMap.values()), Array.from(sMap.values()));
-
-        if (Array.isArray(pulledData.admins) && pulledData.admins.length > 0) {
-          const pulledAdmin = pulledData.admins[0];
-          if (pulledAdmin) {
-            const curAdmin = getStoredAdminProfile();
-            const av = pulledAdmin.avatar || pulledAdmin.avatarUrl;
-            saveStoredAdminProfile({
-              ...curAdmin,
-              avatar: av || curAdmin.avatar,
-              avatarUrl: av || curAdmin.avatarUrl,
-              customPass: pulledAdmin.customPass || curAdmin.customPass,
-            });
-          }
-        }
-
-        window.dispatchEvent(new Event('accounts-updated'));
-      }
-
-      setBootProgress(65);
-      setBootSubMessage('Cập nhật nội dung khóa học, bài học và đề thi trực tuyến...');
-
-      if (pulledData && Array.isArray(pulledData.courses)) {
-        const cleanCourses = pulledData.courses.filter((c: any) => c && c.courseId && c.courseId !== 'course_demo_01');
-        saveStoredCourses(cleanCourses);
-        setCourses(cleanCourses);
-        window.dispatchEvent(new Event('courses-updated'));
-      }
-
       if (pulledData) {
-        if (Array.isArray(pulledData.enrollments) && pulledData.enrollments.length > 0) {
-          pulledData.enrollments.forEach((e: any) => {
-            if (e?.idUser && e?.courseId && e?.courseId !== 'course_demo_01') {
-              saveStoredEnrollment(e.idUser, e.courseId);
+        const demoAccountIds = new Set(['gv.demo', 'gv.mai', 'hs.demo', 'hs.nam']);
+        let generatedMissingAccountId = false;
+        let normalizedAccounts: { teachers: any[]; students: any[] } | undefined;
+
+        if (Array.isArray(pulledData.teachers) || Array.isArray(pulledData.students)) {
+          const curAcc = getStoredAccounts();
+          const tMap = new Map<string, any>();
+          (curAcc.teachers || []).forEach((t: any) => {
+            if (t?.idUser && !demoAccountIds.has(String(t.idUser).toLowerCase())) {
+              tMap.set(String(t.idUser).toLowerCase(), t);
             }
           });
-        }
-        if (Array.isArray(pulledData.progress) && pulledData.progress.length > 0) {
-          pulledData.progress.forEach((p: any) => {
-            if (p?.idUser && p?.courseId && p?.lessonKey && p?.courseId !== 'course_demo_01') {
-              saveStoredProgress(p.idUser, p.courseId, p.lessonKey, p.progressData);
+          const existingTIds = new Set<string>(Array.from(tMap.keys()));
+
+          (pulledData.teachers || []).forEach((t: any) => {
+            let idUser = String(t?.idUser || '').trim();
+            if (demoAccountIds.has(idUser.toLowerCase())) return;
+            const hoTen = String(t?.hoTen || '').trim();
+            const chiDoan = String(t?.chiDoan || t?.toChuyenMon || t?.department || '').trim();
+            if (!idUser && hoTen) {
+              idUser = generateTeacherUsername(hoTen, chiDoan, existingTIds);
+              existingTIds.add(idUser.toLowerCase());
+              generatedMissingAccountId = true;
+            }
+            if (idUser && !demoAccountIds.has(idUser.toLowerCase())) {
+              const key = idUser.toLowerCase();
+              const existing = tMap.get(key) || {};
+              tMap.set(key, {
+                ...existing,
+                ...t,
+                idUser,
+                hoTen: hoTen || existing.hoTen || idUser,
+                chiDoan: chiDoan || existing.chiDoan || 'Giáo viên',
+                defaultPass: t.defaultPass || existing.defaultPass || '123',
+                role: 'TEACHER',
+              });
             }
           });
-        }
-        if (Array.isArray(pulledData.resetPasswordRequests) && pulledData.resetPasswordRequests.length > 0) {
-          saveAllStoredResetPasswordRequests(pulledData.resetPasswordRequests);
-        }
-        if (Array.isArray(pulledData.pendingRegistrations) && pulledData.pendingRegistrations.length > 0) {
-          saveAllStoredPendingRegistrations(pulledData.pendingRegistrations);
-        }
-        if (Array.isArray(pulledData.qaQuestions) && pulledData.qaQuestions.length > 0) {
-          saveStoredQaQuestions(pulledData.qaQuestions);
-        }
-        if (Array.isArray(pulledData.certificates) && pulledData.certificates.length > 0) {
-          pulledData.certificates.forEach((cert: any) => {
-            if (cert && cert.courseId !== 'course_demo_01') {
-              saveStoredCertificate(cert);
+
+          const sMap = new Map<string, any>();
+          (curAcc.students || []).forEach((s: any) => {
+            if (s?.idUser && !demoAccountIds.has(String(s.idUser).toLowerCase())) {
+              sMap.set(String(s.idUser).toLowerCase(), s);
             }
           });
+          const existingSIds = new Set<string>(Array.from(sMap.keys()));
+
+          (pulledData.students || []).forEach((s: any) => {
+            let idUser = String(s?.idUser || '').trim();
+            if (demoAccountIds.has(idUser.toLowerCase())) return;
+            const hoTen = String(s?.hoTen || '').trim();
+            const chiDoan = String(s?.chiDoan || '').trim();
+            const khoi = String(s?.khoi || '').trim();
+            if (!idUser && hoTen) {
+              idUser = generateStudentUsername(hoTen, chiDoan || khoi, existingSIds);
+              existingSIds.add(idUser.toLowerCase());
+              generatedMissingAccountId = true;
+            }
+            if (idUser && !demoAccountIds.has(idUser.toLowerCase())) {
+              const key = idUser.toLowerCase();
+              const existing = sMap.get(key) || {};
+              sMap.set(key, {
+                ...existing,
+                ...s,
+                idUser,
+                hoTen: hoTen || existing.hoTen || idUser,
+                chiDoan: chiDoan || existing.chiDoan || 'Học sinh',
+                khoi: khoi || existing.khoi || '12',
+                defaultPass: s.defaultPass || existing.defaultPass || '123',
+                role: 'STUDENT',
+              });
+            }
+          });
+
+          normalizedAccounts = {
+            teachers: Array.from(tMap.values()),
+            students: Array.from(sMap.values()),
+          };
+
+          if (generatedMissingAccountId) {
+            saveStoredAccounts(normalizedAccounts.teachers, normalizedAccounts.students);
+          }
         }
+
+        setBootProgress(65);
+        setBootSubMessage('Cập nhật nội dung khóa học, bài học và đề thi trực tuyến...');
+
+        const cleanCourses: Course[] | undefined = Array.isArray(pulledData.courses)
+          ? sortCoursesOldestToNewest(
+              pulledData.courses.filter((c: any): c is Course => Boolean(c && c.courseId && c.courseId !== 'course_demo_01'))
+            )
+          : undefined;
+
+        if (cleanCourses) {
+          setCourses(cleanCourses);
+        }
+
+        const pulledAdmin =
+          Array.isArray(pulledData.admins) && pulledData.admins.length > 0
+            ? pulledData.admins[0]
+            : undefined;
+
+        hydrateStorageFromServer({
+          accounts: normalizedAccounts,
+          admin: pulledAdmin
+            ? {
+                ...getStoredAdminProfile(),
+                avatar: pulledAdmin.avatar || pulledAdmin.avatarUrl || getStoredAdminProfile().avatar,
+                avatarUrl: pulledAdmin.avatar || pulledAdmin.avatarUrl || getStoredAdminProfile().avatarUrl,
+                customPass: pulledAdmin.customPass || getStoredAdminProfile().customPass,
+              }
+            : undefined,
+          courses: cleanCourses,
+          enrollments: Array.isArray(pulledData.enrollments)
+            ? pulledData.enrollments.filter((e: any) => e?.idUser && e?.courseId && e?.courseId !== 'course_demo_01')
+            : undefined,
+          progress: Array.isArray(pulledData.progress)
+            ? pulledData.progress.filter((p: any) => p?.idUser && p?.courseId && p?.lessonKey && p?.courseId !== 'course_demo_01')
+            : undefined,
+          resetPasswordRequests: Array.isArray(pulledData.resetPasswordRequests) ? pulledData.resetPasswordRequests : undefined,
+          pendingRegistrations: Array.isArray(pulledData.pendingRegistrations) ? pulledData.pendingRegistrations : undefined,
+          qaQuestions: Array.isArray(pulledData.qaQuestions) ? pulledData.qaQuestions : undefined,
+          certificates: Array.isArray(pulledData.certificates)
+            ? pulledData.certificates.filter((cert: any) => cert && cert.courseId !== 'course_demo_01')
+            : undefined,
+        });
+      } else {
+        setBootProgress(65);
+        setBootSubMessage('Cập nhật nội dung khóa học, bài học và đề thi trực tuyến...');
       }
 
       setBootProgress(85);
@@ -1271,9 +1275,9 @@ export default function App() {
       if (existingIdx >= 0) {
         const next = [...prev];
         next[existingIdx] = savedCourse;
-        return next;
+        return sortCoursesOldestToNewest(next);
       }
-      return [savedCourse, ...prev];
+      return sortCoursesOldestToNewest([...prev, savedCourse]);
     });
 
 

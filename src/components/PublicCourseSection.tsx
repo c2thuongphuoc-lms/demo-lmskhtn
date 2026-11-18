@@ -24,6 +24,7 @@ import {
   getStoredCertificates,
   getStoredProgress,
   getStoredQuizStatus,
+  sortCoursesOldestToNewest,
 } from '../lib/storage';
 import { StudentOverviewCharts } from './StudentOverviewCharts';
 
@@ -230,23 +231,26 @@ export const PublicCourseSection: React.FC<PublicCourseSectionProps> = ({
   const studentDisplayName =
     currentUser?.hoTen || currentUser?.name || 'Học sinh';
 
-  const filteredCourses = courses.filter((c) => {
-    if (isStudent) {
-      const isEnrolled = registeredIds.includes(c.courseId);
-      if (studentFilter === 'MY_COURSES' && !isEnrolled) return false;
-      if (studentFilter === 'NOT_REGISTERED' && isEnrolled) return false;
-    } else {
-      const timeStatus = getCourseTimeStatus(c);
-      if (statusFilter !== 'ALL' && timeStatus !== statusFilter) {
-        return false;
+  const filteredCourses = useMemo(() => {
+    const matching = courses.filter((c) => {
+      if (isStudent) {
+        const isEnrolled = registeredIds.includes(c.courseId);
+        if (studentFilter === 'MY_COURSES' && !isEnrolled) return false;
+        if (studentFilter === 'NOT_REGISTERED' && isEnrolled) return false;
+      } else {
+        const timeStatus = getCourseTimeStatus(c);
+        if (statusFilter !== 'ALL' && timeStatus !== statusFilter) {
+          return false;
+        }
       }
-    }
-    const matchesSearch =
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (c.authorName && c.authorName.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesSearch;
-  });
+      const matchesSearch =
+        c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (c.authorName && c.authorName.toLowerCase().includes(searchQuery.toLowerCase()));
+      return matchesSearch;
+    });
+    return sortCoursesOldestToNewest(matching);
+  }, [courses, isStudent, registeredIds, studentFilter, statusFilter, searchQuery]);
 
   return (
     <section className="space-y-6">
